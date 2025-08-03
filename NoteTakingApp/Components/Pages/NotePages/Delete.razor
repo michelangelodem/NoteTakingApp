@@ -1,0 +1,67 @@
+﻿@page "/notes/delete"
+@using Microsoft.EntityFrameworkCore
+@using NoteTakingApp.Models
+@inject IDbContextFactory<NoteTakingApp.Data.NoteTakingAppContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Delete</PageTitle>
+
+<h1>Delete</h1>
+
+<p>Are you sure you want to delete this?</p>
+<div>
+    <h2>Note</h2>
+    <hr />
+    @if (note is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">Title</dt>
+            <dd class="col-sm-10">@note.Title</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">Content</dt>
+            <dd class="col-sm-10">@note.Content</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">CreatedAt</dt>
+            <dd class="col-sm-10">@note.CreatedAt</dd>
+        </dl>
+        <dl class="row">
+            <dt class="col-sm-2">UpdatedAt</dt>
+            <dd class="col-sm-10">@note.UpdatedAt</dd>
+        </dl>
+        <EditForm method="post" Model="note" OnValidSubmit="DeleteNote" FormName="delete" Enhance>
+            <button type="submit" class="btn btn-danger" disabled="@(note is null)">Delete</button> |
+            <a href="/notes">Back to List</a>
+        </EditForm>
+    }
+</div>
+
+@code {
+    private Note? note;
+
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        note = await context.Note.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (note is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    private async Task DeleteNote()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Note.Remove(note!);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/notes");
+    }
+}

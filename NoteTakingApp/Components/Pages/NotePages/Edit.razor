@@ -1,0 +1,104 @@
+﻿@page "/notes/edit"
+@using Microsoft.EntityFrameworkCore
+@using NoteTakingApp.Models
+@inject IDbContextFactory<NoteTakingApp.Data.NoteTakingAppContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+<h2>Note</h2>
+<hr />
+@if (Note is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Note" OnValidSubmit="UpdateNote" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary role="alert"/>
+                <input type="hidden" name="Note.Id" value="@Note.Id" />
+                <div class="mb-3">
+                    <label for="title" class="form-label">Title:</label>
+                    <InputText id="title" @bind-Value="Note.Title" class="form-control" />
+                    <ValidationMessage For="() => Note.Title" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="content" class="form-label">Content:</label>
+                    <InputText id="content" @bind-Value="Note.Content" class="form-control" />
+                    <ValidationMessage For="() => Note.Content" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="createdat" class="form-label">CreatedAt:</label>
+                    <InputDate id="createdat" @bind-Value="Note.CreatedAt" class="form-control" />
+                    <ValidationMessage For="() => Note.CreatedAt" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="updatedat" class="form-label">UpdatedAt:</label>
+                    <InputDate id="updatedat" @bind-Value="Note.UpdatedAt" class="form-control" />
+                    <ValidationMessage For="() => Note.UpdatedAt" class="text-danger" />
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/notes">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private Note? Note { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Note ??= await context.Note.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (Note is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    // To protect from overposting attacks, enable the specific properties you want to bind to.
+    // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task UpdateNote()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Attach(Note!).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!NoteExists(Note!.Id))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/notes");
+    }
+
+    private bool NoteExists(int id)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Note.Any(e => e.Id == id);
+    }
+}

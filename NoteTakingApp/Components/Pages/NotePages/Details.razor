@@ -1,0 +1,52 @@
+﻿@page "/notes/details"
+@using Microsoft.EntityFrameworkCore
+@using NoteTakingApp.Models
+@inject IDbContextFactory<NoteTakingApp.Data.NoteTakingAppContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>Note</h2>
+    <hr />
+    @if (note is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">Title</dt>
+            <dd class="col-sm-10">@note.Title</dd>
+            <dt class="col-sm-2">Content</dt>
+            <dd class="col-sm-10">@note.Content</dd>
+            <dt class="col-sm-2">CreatedAt</dt>
+            <dd class="col-sm-10">@note.CreatedAt</dd>
+            <dt class="col-sm-2">UpdatedAt</dt>
+            <dd class="col-sm-10">@note.UpdatedAt</dd>
+        </dl>
+        <div>
+            <a href="@($"/notes/edit?id={note.Id}")">Edit</a> |
+            <a href="@($"/notes")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private Note? note;
+
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        note = await context.Note.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (note is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

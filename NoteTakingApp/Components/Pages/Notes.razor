@@ -1,0 +1,115 @@
+﻿@page "/notes"
+
+@using NoteTakingApp.Models
+@using NoteTakingApp.Services
+@using NoteTakingApp.Services.Implementations
+
+<div class="layout">
+	<aside class="sidebar">
+		<button class="new-note-btn" @onclick="CreateNoteAsync">+ New Note</button>
+		<ul class="note-list">
+			@foreach (var note in NoteList)
+			{
+				<li class="note_list_item" @(SelectedNote?.Id == note.Id ? "selected" : "")
+				    @onclick="() => SelectNote(note)">
+					<span>
+						@note.Title
+					</span>
+					<span class="note_date">
+						@note.UpdatedAt.ToLocalTime().ToShortDateString()
+					</span>
+				</li>
+			}
+		</ul>
+	</aside>
+	<main class="main-content">
+		@if (SelectedNote != null) 
+		{
+			<EditForm Model="SelectedNote" OnValidSubmit="SaveNote">
+				<div class="form-group">
+					<label>Title</label>
+					<InputText class="form-control" @bind-Value="SelectedNote.Title" />
+				</div>
+				<div class="form-group">
+					<label>Content</label>
+					<InputTextArea class="form-control" @bind-Value="SelectedNote.Content" rows="10" />
+				</div>
+				<button type="submit" class="save-btn">Save</button>
+				<button type="button" class="delete-btn" @onclick="DeleteNote">Delete</button>
+			</EditForm>
+		}
+		else
+		{
+			<div class="empty-state">
+				<p>Select or create a note to begin</p>
+			</div>
+		}
+	</main>
+</div>
+
+@code {
+	private NoteService _noteService = new NoteService();
+	private List<Note> NoteList = new();
+	private Note? SelectedNote;
+
+	protected override async Task OnInitializedAsync()
+	{
+		NoteList = await _noteService.GetAllNotesAsync();
+	}
+
+	private void SelectNote(Note note)
+	{
+		// Clone to avoid editing the list directly
+		SelectedNote = new Note
+		{
+			Id = note.Id,
+			Title = note.Title,
+			Content = note.Content,
+			CreatedAt = note.CreatedAt,
+			UpdatedAt = note.UpdatedAt
+		};
+	}
+
+	private void CreateNewNote()
+	{
+		SelectedNote = new Note
+		{
+			Title = "",
+			Content = "",
+			CreatedAt = DateTime.UtcNow,
+			UpdatedAt = DateTime.UtcNow
+		};
+	}
+
+	private async Task SaveNote()
+	{
+		if (SelectedNote == null) return;
+
+		if (SelectedNote.Id.Equals(0))
+		{
+			var created = await NoteService.CreateNoteAsync(SelectedNote);
+			NoteList.Insert(0, created);
+			SelectedNote = created;
+		}
+		else
+		{
+			var updated = await NoteService.UpdateNoteAsync(SelectedNote);
+			var idx = NoteList.FindIndex(n => n.Id == updated.Id);
+			if (idx >= 0)
+				NoteList[idx] = updated;
+			SelectedNote = updated;
+		}
+	}
+
+	private async Task DeleteNote()
+	{
+		if (SelectedNote == null || SelectedNote.Id.Equals(0)) return;
+		var success = await NoteService.DeleteNoteAsync(SelectedNote.Id);
+		if (success)
+		{
+			NoteList.RemoveAll(n => n.Id == SelectedNote.Id);
+			SelectedNote = null;
+		}
+	}
+
+}
