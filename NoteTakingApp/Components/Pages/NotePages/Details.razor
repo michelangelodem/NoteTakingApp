@@ -1,4 +1,4 @@
-﻿@page "/notes/details"
+﻿@page "/notes/details-old"
 @using Microsoft.EntityFrameworkCore
 @using NoteTakingApp.Models
 @inject IDbContextFactory<NoteTakingApp.Data.NoteTakingAppContext> DbFactory
@@ -42,7 +42,7 @@
     protected override async Task OnInitializedAsync()
     {
         using var context = DbFactory.CreateDbContext();
-        note = await context.Note.FirstOrDefaultAsync(m => m.Id == Id);
+        note = await context.Note.FirstOrDefaultAsync(m => m.Id.Equals(Id));
 
         if (note is null)
         {

@@ -1,64 +1,64 @@
-﻿
+﻿using Microsoft.EntityFrameworkCore;
+using NoteTakingApp.Data;
 using NoteTakingApp.Models;
 using NoteTakingApp.Services.Interfaces;
 
-namespace NoteTakingApp.Services.Implementations
+namespace NoteTakingApp.Services.Implementations 
 {
     public class NoteService : INoteService
     {
+        private readonly IDbContextFactory<NoteTakingAppContext> _dbContextFactory;
 
-        private readonly List<Note> _notes = new();
-        private Guid _nextId = Guid.NewGuid();
+        public NoteService(IDbContextFactory<NoteTakingAppContext> dbContextFactory)
+        {
+            _dbContextFactory = dbContextFactory;
+        }
 
         public async Task<List<Note>> GetAllNotesAsync()
         {
-            var notes = _notes.OrderByDescending(n => n.UpdatedAt);
-            return await Task.FromResult(notes.ToList());
+            using var context = _dbContextFactory.CreateDbContext();
+            return await context.Note
+                .OrderByDescending(n => n.UpdatedAt)
+                .ToListAsync();
         }
 
         public async Task<Note?> GetNoteByIdAsync(Guid id)
         {
-            var note = _notes.FirstOrDefault(n => n.Id.Equals(id));
-            return await Task.FromResult(note);
+            using var context = _dbContextFactory.CreateDbContext();
+            return await context.Note.FindAsync(id);
         }
 
         public async Task<Note> CreateNoteAsync(Note note)
         {
-            note.Id = _nextId;
-            _notes.Add(note);
-            return await Task.FromResult(note);
+            using var context = _dbContextFactory.CreateDbContext();
+            note.Id = Guid.NewGuid();
+            note.CreatedAt = DateTime.UtcNow;
+            note.UpdatedAt = DateTime.UtcNow;
+
+            context.Note.Add(note);
+            await context.SaveChangesAsync();
+            return note;
         }
 
         public async Task<Note> UpdateNoteAsync(Note note)
         {
-            var existingNote = _notes.FirstOrDefault(n => n.Id.Equals(note.Id));
-            if (existingNote != null)
-            {
-                existingNote.Title = note.Title;
-                existingNote.Content = note.Content;
-                existingNote.UpdatedAt = DateTime.UtcNow;
-            }
+            using var context = _dbContextFactory.CreateDbContext();
+            note.UpdatedAt = DateTime.UtcNow;
 
-            return await Task.FromResult(existingNote);
+            context.Note.Update(note);
+            await context.SaveChangesAsync();
+            return note;
         }
 
         public async Task<bool> DeleteNoteAsync(Guid id)
         {
-            var note = _notes.FirstOrDefault(n => n.Id.Equals(0));
-            if (note != null)
-            {
-                _notes.Remove(note);
-                return await Task.FromResult(true);
-            }
+            using var context = _dbContextFactory.CreateDbContext();
+            var note = await context.Note.FindAsync(id);
+            if (note == null) return false;
 
-            return await Task.FromResult(false);
-        }
-
-        public async Task<List<Note>> SearchNotesAsync(String searchTerm)
-        {
-            var searchResult =
-                _notes.Where(n => n.Title.Contains(searchTerm, StringComparison.CurrentCultureIgnoreCase));
-            return await Task.FromResult(searchResult.ToList());
+            context.Note.Remove(note);
+            await context.SaveChangesAsync();
+            return true;
         }
     }
-};
+}

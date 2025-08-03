@@ -1,4 +1,4 @@
-﻿@page "/notes/edit"
+﻿@page "/notes/edit-old"
 @using Microsoft.EntityFrameworkCore
 @using NoteTakingApp.Models
 @inject IDbContextFactory<NoteTakingApp.Data.NoteTakingAppContext> DbFactory
@@ -62,10 +62,10 @@ else
     protected override async Task OnInitializedAsync()
     {
         using var context = DbFactory.CreateDbContext();
-        Note ??= await context.Note.FirstOrDefaultAsync(m => m.Id == Id);
+        Note ??= await context.Note.FirstOrDefaultAsync(m => m.Id.Equals(Id));
 
         if (Note is null)
-        {
+        { 
             NavigationManager.NavigateTo("notfound");
         }
     }
@@ -82,8 +82,9 @@ else
             await context.SaveChangesAsync();
         }
         catch (DbUpdateConcurrencyException)
-        {
-            if (!NoteExists(Note!.Id))
+        {   
+			Guid id = Note!.Id;
+            if (!NoteExists(id))
             {
                 NavigationManager.NavigateTo("notfound");
             }
@@ -96,9 +97,9 @@ else
         NavigationManager.NavigateTo("/notes");
     }
 
-    private bool NoteExists(int id)
+    private bool NoteExists(Guid id)
     {
         using var context = DbFactory.CreateDbContext();
-        return context.Note.Any(e => e.Id == id);
+        return context.Note.Any(e => e.Id.Equals(id));
     }
 }

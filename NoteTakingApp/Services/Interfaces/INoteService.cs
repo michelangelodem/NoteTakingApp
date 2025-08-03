@@ -9,6 +9,5 @@ namespace NoteTakingApp.Services.Interfaces
         Task<Note> CreateNoteAsync(Note note);
         Task<Note> UpdateNoteAsync(Note note);
         Task<bool> DeleteNoteAsync(Guid id);
-        Task<List<Note>> SearchNotesAsync(string searchTerm);
     }
 }

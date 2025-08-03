@@ -1,65 +1,429 @@
 ﻿@page "/notes"
-
 @using NoteTakingApp.Models
 @using NoteTakingApp.Services
-@using NoteTakingApp.Services.Implementations
+@using NoteTakingApp.Services.Interfaces
+@inject INoteService NoteService
+@inject IJSRuntime JSRuntime
 
-<div class="layout">
-	<aside class="sidebar">
-		<button class="new-note-btn" @onclick="CreateNoteAsync">+ New Note</button>
-		<ul class="note-list">
-			@foreach (var note in NoteList)
+<PageTitle>Notes</PageTitle>
+
+<div class="notes-container">
+	<aside class="notes-sidebar">
+		<div class="sidebar-header">
+			<button class="new-note-btn" @onclick="CreateNewNote">
+				<span class="plus-icon">+</span>
+				New Note
+			</button>
+		</div>
+
+		<div class="search-container">
+			<input type="text" class="search-input" placeholder="Search notes..."
+				   @bind="searchTerm" @oninput="FilterNotes" />
+		</div>
+
+		<div class="notes-list-container">
+			@if (filteredNotes.Any())
 			{
-				<li class="note_list_item" @(SelectedNote?.Id == note.Id ? "selected" : "")
-				    @onclick="() => SelectNote(note)">
-					<span>
-						@note.Title
-					</span>
-					<span class="note_date">
-						@note.UpdatedAt.ToLocalTime().ToShortDateString()
-					</span>
-				</li>
+				@foreach (var note in filteredNotes)
+				{
+					<div class="note-item @(SelectedNote?.Id == note.Id ? "selected" : "")"
+						 @onclick="() => SelectNote(note)">
+						<div class="note-title">
+							@(string.IsNullOrEmpty(note.Title) ? "Untitled" : note.Title)
+						</div>
+						<div class="note-preview">
+							@GetPreview(note.Content)
+						</div>
+						<div class="note-date">
+							@note.UpdatedAt.ToString("MMM dd, yyyy")
+						</div>
+					</div>
+				}
 			}
-		</ul>
+			else
+			{
+				<div class="empty-notes">
+					<p>No notes found</p>
+				</div>
+			}
+		</div>
 	</aside>
-	<main class="main-content">
-		@if (SelectedNote != null) 
+
+	<main class="notes-editor">
+		@if (SelectedNote != null)
 		{
-			<EditForm Model="SelectedNote" OnValidSubmit="SaveNote">
-				<div class="form-group">
-					<label>Title</label>
-					<InputText class="form-control" @bind-Value="SelectedNote.Title" />
+			<div class="editor-container">
+				<div class="editor-header">
+					<input class="title-input"
+						   @bind="SelectedNote.Title"
+						   @onblur="SaveNote"
+						   placeholder="Note title..." />
+					<div class="editor-actions">
+						<button class="action-btn save-btn" @onclick="SaveNote" title="Save">
+							💾
+						</button>
+						<button class="action-btn delete-btn" @onclick="DeleteNote" title="Delete">
+							🗑️
+						</button>
+					</div>
 				</div>
-				<div class="form-group">
-					<label>Content</label>
-					<InputTextArea class="form-control" @bind-Value="SelectedNote.Content" rows="10" />
+
+				<textarea class="content-editor"
+						  @bind="SelectedNote.Content"
+						  @onblur="SaveNote"
+						  placeholder="Start writing..."></textarea>
+
+				<div class="editor-footer">
+					<span class="word-count">@GetWordCount(SelectedNote.Content) words</span>
+					<span class="last-modified">Last modified: @SelectedNote.UpdatedAt.ToString("MMM dd, yyyy HH:mm")</span>
 				</div>
-				<button type="submit" class="save-btn">Save</button>
-				<button type="button" class="delete-btn" @onclick="DeleteNote">Delete</button>
-			</EditForm>
+			</div>
 		}
 		else
 		{
-			<div class="empty-state">
-				<p>Select or create a note to begin</p>
+			<div class="empty-editor">
+				<div class="empty-state">
+					<h2>📝</h2>
+					<p>Select a note to start editing</p>
+					<button class="create-first-note-btn" @onclick="CreateNewNote">Create your first note</button>
+				</div>
 			</div>
 		}
 	</main>
 </div>
 
+<style>
+	.notes-container {
+		display: flex;
+		height: calc(100vh - 3.5rem);
+		background: #1e1e1e;
+		color: #e0e0e0;
+	}
+
+	.notes-sidebar {
+		width: 300px;
+		background: #252525;
+		border-right: 1px solid #404040;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.sidebar-header {
+		padding: 16px;
+		border-bottom: 1px solid #404040;
+	}
+
+	.new-note-btn {
+		width: 100%;
+		padding: 12px 16px;
+		background: #007acc;
+		color: white;
+		border: none;
+		border-radius: 6px;
+		cursor: pointer;
+		font-size: 14px;
+		font-weight: 500;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		transition: background 0.2s;
+	}
+
+		.new-note-btn:hover {
+			background: #005a9e;
+		}
+
+	.plus-icon {
+		font-size: 16px;
+		font-weight: bold;
+	}
+
+	.search-container {
+		padding: 16px;
+		border-bottom: 1px solid #404040;
+	}
+
+	.search-input {
+		width: 100%;
+		padding: 8px 12px;
+		background: #1e1e1e;
+		border: 1px solid #404040;
+		border-radius: 4px;
+		color: #e0e0e0;
+		font-size: 14px;
+	}
+
+		.search-input:focus {
+			outline: none;
+			border-color: #007acc;
+		}
+
+	.notes-list-container {
+		flex: 1;
+		overflow-y: auto;
+	}
+
+	.note-item {
+		padding: 16px;
+		border-bottom: 1px solid #404040;
+		cursor: pointer;
+		transition: background 0.2s;
+	}
+
+		.note-item:hover {
+			background: #2d2d2d;
+		}
+
+		.note-item.selected {
+			background: #007acc;
+			color: white;
+		}
+
+	.note-title {
+		font-weight: 600;
+		font-size: 14px;
+		margin-bottom: 4px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.note-preview {
+		font-size: 12px;
+		color: #b0b0b0;
+		margin-bottom: 8px;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		line-height: 1.4;
+	}
+
+	.note-item.selected .note-preview {
+		color: rgba(255, 255, 255, 0.8);
+	}
+
+	.note-date {
+		font-size: 11px;
+		color: #888;
+	}
+
+	.note-item.selected .note-date {
+		color: rgba(255, 255, 255, 0.7);
+	}
+
+	.notes-editor {
+		flex: 1;
+		background: #1e1e1e;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.editor-container {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+	}
+
+	.editor-header {
+		padding: 20px 24px;
+		border-bottom: 1px solid #404040;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.title-input {
+		flex: 1;
+		background: transparent;
+		border: none;
+		color: #e0e0e0;
+		font-size: 24px;
+		font-weight: 600;
+		padding: 0;
+		margin-right: 16px;
+	}
+
+		.title-input:focus {
+			outline: none;
+		}
+
+		.title-input::placeholder {
+			color: #666;
+		}
+
+	.editor-actions {
+		display: flex;
+		gap: 8px;
+	}
+
+	.action-btn {
+		background: transparent;
+		border: 1px solid #404040;
+		color: #e0e0e0;
+		padding: 8px 12px;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 14px;
+		transition: all 0.2s;
+	}
+
+		.action-btn:hover {
+			background: #404040;
+		}
+
+	.save-btn:hover {
+		background: #007acc;
+		border-color: #007acc;
+	}
+
+	.delete-btn:hover {
+		background: #d32f2f;
+		border-color: #d32f2f;
+	}
+
+	.content-editor {
+		flex: 1;
+		background: transparent;
+		border: none;
+		color: #e0e0e0;
+		font-size: 16px;
+		line-height: 1.6;
+		padding: 24px;
+		resize: none;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	}
+
+		.content-editor:focus {
+			outline: none;
+		}
+
+		.content-editor::placeholder {
+			color: #666;
+		}
+
+	.editor-footer {
+		padding: 16px 24px;
+		border-top: 1px solid #404040;
+		display: flex;
+		justify-content: space-between;
+		font-size: 12px;
+		color: #888;
+	}
+
+	.empty-editor {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		height: 100%;
+	}
+
+	.empty-state {
+		text-align: center;
+	}
+
+		.empty-state h2 {
+			font-size: 48px;
+			margin-bottom: 16px;
+			opacity: 0.3;
+		}
+
+		.empty-state p {
+			font-size: 18px;
+			color: #888;
+			margin-bottom: 24px;
+		}
+
+	.create-first-note-btn {
+		padding: 12px 24px;
+		background: #007acc;
+		color: white;
+		border: none;
+		border-radius: 6px;
+		cursor: pointer;
+		font-size: 14px;
+		transition: background 0.2s;
+	}
+
+		.create-first-note-btn:hover {
+			background: #005a9e;
+		}
+
+	.empty-notes {
+		padding: 32px 16px;
+		text-align: center;
+		color: #888;
+	}
+
+	/* Scrollbar styling */
+	.notes-list-container::-webkit-scrollbar,
+	.content-editor::-webkit-scrollbar {
+		width: 8px;
+	}
+
+	.notes-list-container::-webkit-scrollbar-track,
+	.content-editor::-webkit-scrollbar-track {
+		background: #1e1e1e;
+	}
+
+	.notes-list-container::-webkit-scrollbar-thumb,
+	.content-editor::-webkit-scrollbar-thumb {
+		background: #404040;
+		border-radius: 4px;
+	}
+
+		.notes-list-container::-webkit-scrollbar-thumb:hover,
+		.content-editor::-webkit-scrollbar-thumb:hover {
+			background: #555;
+		}
+
+	/* Responsive design */
+	media (max-width: 768px) {
+		.notes-sidebar {
+			width: 100%;
+			position: absolute;
+			z-index: 1000;
+			height: 100%;
+		}
+
+	.notes-editor {
+		display: none;
+	}
+
+	.notes-sidebar.mobile-hidden {
+		display: none;
+	}
+
+	.notes-editor.mobile-visible {
+		display: flex;
+	}
+
+	}
+</style>
+
 @code {
-	private NoteService _noteService = new NoteService();
-	private List<Note> NoteList = new();
+	private List<Note> allNotes = new();
+	private List<Note> filteredNotes = new();
 	private Note? SelectedNote;
+	private string searchTerm = string.Empty;
+	private bool hasUnsavedChanges = false;
 
 	protected override async Task OnInitializedAsync()
 	{
-		NoteList = await _noteService.GetAllNotesAsync();
+		await LoadNotes();
+	}
+
+	private async Task LoadNotes()
+	{
+		allNotes = await NoteService.GetAllNotesAsync();
+		filteredNotes = allNotes.ToList();
+		StateHasChanged();
 	}
 
 	private void SelectNote(Note note)
 	{
-		// Clone to avoid editing the list directly
+		if (SelectedNote?.Id == note.Id) return;
+
 		SelectedNote = new Note
 		{
 			Id = note.Id,
@@ -74,7 +438,7 @@
 	{
 		SelectedNote = new Note
 		{
-			Title = "",
+			Title = "Untitled",
 			Content = "",
 			CreatedAt = DateTime.UtcNow,
 			UpdatedAt = DateTime.UtcNow
@@ -85,31 +449,92 @@
 	{
 		if (SelectedNote == null) return;
 
-		if (SelectedNote.Id.Equals(0))
+		try
 		{
-			var created = await NoteService.CreateNoteAsync(SelectedNote);
-			NoteList.Insert(0, created);
-			SelectedNote = created;
+			Note savedNote;
+
+			if (allNotes.Any(n => n.Id == SelectedNote.Id))
+			{
+				// Update existing note
+				savedNote = await NoteService.UpdateNoteAsync(SelectedNote);
+				var existingNote = allNotes.FirstOrDefault(n => n.Id == savedNote.Id);
+				if (existingNote != null)
+				{
+					existingNote.Title = savedNote.Title;
+					existingNote.Content = savedNote.Content;
+					existingNote.UpdatedAt = savedNote.UpdatedAt;
+				}
+			}
+			else
+			{
+				// Create new note
+				savedNote = await NoteService.CreateNoteAsync(SelectedNote);
+				allNotes.Insert(0, savedNote);
+				SelectedNote.Id = savedNote.Id;
+			}
+
+			// Refresh filtered list
+			FilterNotes();
+			hasUnsavedChanges = false;
+			StateHasChanged();
 		}
-		else
+		catch (Exception ex)
 		{
-			var updated = await NoteService.UpdateNoteAsync(SelectedNote);
-			var idx = NoteList.FindIndex(n => n.Id == updated.Id);
-			if (idx >= 0)
-				NoteList[idx] = updated;
-			SelectedNote = updated;
+			// Handle error (you might want to show a toast notification)
+			await JSRuntime.InvokeVoidAsync("console.error", "Failed to save note:", ex.Message);
 		}
 	}
 
 	private async Task DeleteNote()
 	{
-		if (SelectedNote == null || SelectedNote.Id.Equals(0)) return;
-		var success = await NoteService.DeleteNoteAsync(SelectedNote.Id);
-		if (success)
+		if (SelectedNote == null) return;
+
+		var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this note?");
+		if (!confirmed) return;
+
+		try
 		{
-			NoteList.RemoveAll(n => n.Id == SelectedNote.Id);
-			SelectedNote = null;
+			var success = await NoteService.DeleteNoteAsync(SelectedNote.Id);
+			if (success)
+			{
+				allNotes.RemoveAll(n => n.Id == SelectedNote.Id);
+				FilterNotes();
+				SelectedNote = null;
+				StateHasChanged();
+			}
+		}
+		catch (Exception ex)
+		{
+			await JSRuntime.InvokeVoidAsync("console.error", "Failed to delete note:", ex.Message);
 		}
 	}
 
+	private void FilterNotes()
+	{
+		if (string.IsNullOrWhiteSpace(searchTerm))
+		{
+			filteredNotes = allNotes.OrderByDescending(n => n.UpdatedAt).ToList();
+		}
+		else
+		{
+			filteredNotes = allNotes
+				.Where(n => n.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+						   n.Content.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+				.OrderByDescending(n => n.UpdatedAt)
+				.ToList();
+		}
+		StateHasChanged();
+	}
+
+	private string GetPreview(string content)
+	{
+		if (string.IsNullOrEmpty(content)) return "No content";
+		return content.Length > 100 ? content.Substring(0, 100) + "..." : content;
+	}
+
+	private int GetWordCount(string content)
+	{
+		if (string.IsNullOrWhiteSpace(content)) return 0;
+		return content.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+	}
 }
