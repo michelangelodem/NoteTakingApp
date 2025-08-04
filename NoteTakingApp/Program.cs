@@ -42,4 +42,4 @@ app.UseAntiforgery();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.Run(); //i was here//
+app.Run();
