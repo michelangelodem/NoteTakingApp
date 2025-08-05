@@ -1,4 +1,5 @@
 ﻿@page "/notes"
+@rendermode InteractiveServer
 @using NoteTakingApp.Models
 @using NoteTakingApp.Services
 @using NoteTakingApp.Services.Interfaces
@@ -18,7 +19,9 @@
 
 		<div class="search-container">
 			<input type="text" class="search-input" placeholder="Search notes..."
-				   @bind="searchTerm" @oninput="FilterNotes" />
+				   @bind="searchTerm" 
+				   @bind:event="oninput"
+				   @onkeyup="FilterNotes" />
 		</div>
 
 		<div class="notes-list-container">
@@ -56,6 +59,7 @@
 				<div class="editor-header">
 					<input class="title-input"
 						   @bind="SelectedNote.Title"
+						   @bind:event="oninput"
 						   @onblur="SaveNote"
 						   placeholder="Note title..." />
 					<div class="editor-actions">
@@ -70,6 +74,7 @@
 
 				<textarea class="content-editor"
 						  @bind="SelectedNote.Content"
+						  @bind:event="oninput"
 						  @onblur="SaveNote"
 						  placeholder="Start writing..."></textarea>
 
@@ -92,7 +97,8 @@
 	</main>
 </div>
 
-<style>
+<style> 
+{
 	.notes-container {
 		display: flex;
 		height: calc(100vh - 3.5rem);
@@ -372,33 +378,11 @@
 		border-radius: 4px;
 	}
 
-		.notes-list-container::-webkit-scrollbar-thumb:hover,
-		.content-editor::-webkit-scrollbar-thumb:hover {
-			background: #555;
-		}
-
-	/* Responsive design */
-	media (max-width: 768px) {
-		.notes-sidebar {
-			width: 100%;
-			position: absolute;
-			z-index: 1000;
-			height: 100%;
-		}
-
-	.notes-editor {
-		display: none;
+	.notes-list-container::-webkit-scrollbar-thumb:hover,
+	.content-editor::-webkit-scrollbar-thumb:hover {
+		background: #555;
 	}
-
-	.notes-sidebar.mobile-hidden {
-		display: none;
-	}
-
-	.notes-editor.mobile-visible {
-		display: flex;
-	}
-
-	}
+}
 </style>
 
 @code {
@@ -415,15 +399,23 @@
 
 	private async Task LoadNotes()
 	{
-		allNotes = await NoteService.GetAllNotesAsync();
-		filteredNotes = allNotes.ToList();
-		StateHasChanged();
+		try
+		{
+			allNotes = await NoteService.GetAllNotesAsync();
+			filteredNotes = allNotes.ToList();
+			StateHasChanged();
+		}
+		catch (Exception ex)
+		{
+			await JSRuntime.InvokeVoidAsync("console.error", "Failed to load notes:", ex.Message);
+		}
 	}
 
 	private void SelectNote(Note note)
 	{
 		if (SelectedNote?.Id == note.Id) return;
 
+		// Create a copy to avoid reference issues
 		SelectedNote = new Note
 		{
 			Id = note.Id,
@@ -432,17 +424,22 @@
 			CreatedAt = note.CreatedAt,
 			UpdatedAt = note.UpdatedAt
 		};
+
+		StateHasChanged();
 	}
 
 	private void CreateNewNote()
 	{
 		SelectedNote = new Note
 		{
+			Id = Guid.Empty, // This will be set when saved
 			Title = "Untitled",
 			Content = "",
 			CreatedAt = DateTime.UtcNow,
 			UpdatedAt = DateTime.UtcNow
 		};
+
+		StateHasChanged();
 	}
 
 	private async Task SaveNote()
@@ -452,35 +449,40 @@
 		try
 		{
 			Note savedNote;
+			var existingNote = allNotes.FirstOrDefault(n => n.Id == SelectedNote.Id);
 
-			if (allNotes.Any(n => n.Id == SelectedNote.Id))
+			if (existingNote != null && SelectedNote.Id != Guid.Empty)
 			{
 				// Update existing note
+				SelectedNote.UpdatedAt = DateTime.UtcNow;
 				savedNote = await NoteService.UpdateNoteAsync(SelectedNote);
-				var existingNote = allNotes.FirstOrDefault(n => n.Id == savedNote.Id);
-				if (existingNote != null)
-				{
-					existingNote.Title = savedNote.Title;
-					existingNote.Content = savedNote.Content;
-					existingNote.UpdatedAt = savedNote.UpdatedAt;
-				}
+				
+				// Update the note in our local list
+				existingNote.Title = savedNote.Title;
+				existingNote.Content = savedNote.Content;
+				existingNote.UpdatedAt = savedNote.UpdatedAt;
 			}
 			else
 			{
 				// Create new note
 				savedNote = await NoteService.CreateNoteAsync(SelectedNote);
 				allNotes.Insert(0, savedNote);
+				
+				// Update the selected note with the new ID
 				SelectedNote.Id = savedNote.Id;
+				SelectedNote.CreatedAt = savedNote.CreatedAt;
+				SelectedNote.UpdatedAt = savedNote.UpdatedAt;
 			}
 
-			// Refresh filtered list
+			// Refresh filtered list and update UI
 			FilterNotes();
 			hasUnsavedChanges = false;
 			StateHasChanged();
+
+			await JSRuntime.InvokeVoidAsync("console.log", "Note saved successfully");
 		}
 		catch (Exception ex)
 		{
-			// Handle error (you might want to show a toast notification)
 			await JSRuntime.InvokeVoidAsync("console.error", "Failed to save note:", ex.Message);
 		}
 	}
@@ -489,18 +491,21 @@
 	{
 		if (SelectedNote == null) return;
 
-		var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this note?");
-		if (!confirmed) return;
-
 		try
 		{
+			var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this note?");
+			if (!confirmed) return;
+
 			var success = await NoteService.DeleteNoteAsync(SelectedNote.Id);
 			if (success)
 			{
+				// Remove from local list
 				allNotes.RemoveAll(n => n.Id == SelectedNote.Id);
 				FilterNotes();
 				SelectedNote = null;
 				StateHasChanged();
+
+				await JSRuntime.InvokeVoidAsync("console.log", "Note deleted successfully");
 			}
 		}
 		catch (Exception ex)
@@ -518,8 +523,8 @@
 		else
 		{
 			filteredNotes = allNotes
-				.Where(n => n.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-						   n.Content.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+				.Where(n => (n.Title?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true) ||
+						   (n.Content?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true))
 				.OrderByDescending(n => n.UpdatedAt)
 				.ToList();
 		}
