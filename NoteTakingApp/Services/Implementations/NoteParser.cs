@@ -22,7 +22,7 @@ namespace NoteTakingApp.Services.Implementations
             {
                 FileName = fileName,
                 FileNameWithoutExtension = fileNameWithoutExtension,
-                DisplayTitle = displayTitle,
+                DisplayTitle = displayTitle ?? fileNameWithoutExtension,
                 ReferenceTitle = fileNameWithoutExtension, // Default to file name without extension
                 Content = content,
                 WordCount = wordCount,

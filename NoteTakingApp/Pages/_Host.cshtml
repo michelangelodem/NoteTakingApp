@@ -1,0 +1,21 @@
+﻿@page "/"
+@using NoteTakingApp.Components
+@namespace NoteTakingApp.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+	<meta charset="utf-8"/>
+	<title>NoteTakingApp</title>
+	<base href="~/"/>
+	<link href="css/bootstrap/bootstrap.min.css" rel="stylesheet"/>
+	<link href="css/site.css" rel="stylesheet"/>
+</head>
+<body>
+<app>
+	<component type="typeof(App)" render-mode="ServerPrerendered" />
+</app>
+<script src="_framework/blazor.server.js"></script>
+</body>
+</html>

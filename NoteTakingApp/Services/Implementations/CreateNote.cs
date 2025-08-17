@@ -6,23 +6,19 @@ using NuGet.Packaging;
 
 namespace NoteTakingApp.Services.Implementations
 {
-    public class CreateNote : INoteService
+    public class CreateNote
     {
         private readonly NotesConfiguration _notesConfiguration;
         private readonly Dictionary<string, NoteMetadata> _notes;
+
         public CreateNote(NotesConfiguration notesConfiguration, Dictionary<string, NoteMetadata> notes)
         {
             _notesConfiguration = notesConfiguration;
-            _notes = notes ?? throw new ArgumentNullException(nameof(notes), "Notes dictionary cannot be null.");
-
+            _notes = notes;
         }
 
         public async Task<NoteMetadata> CreateNoteAsync(string title, string? initialContent = null)
         {
-            if(string.IsNullOrWhiteSpace(title))
-            {
-                throw new ArgumentException("Title cannot be null or empty.", nameof(title));
-            }
 
             var fileName = GenerateFileNameFromTitle(title);
             var filePath = Path.Combine(_notesConfiguration.NotesDirectory, $"{fileName}.md");
@@ -30,17 +26,24 @@ namespace NoteTakingApp.Services.Implementations
             filePath = EnsureUniqueFilePath(filePath);
             fileName = Path.GetFileNameWithoutExtension(filePath);
 
+            if(string.IsNullOrWhiteSpace(title))
+            {
+                title = fileName;
+            }
+
             var content = SetContentAccordingToInitialContent(initialContent, title);
 
             await File.WriteAllTextAsync(filePath, content);
             var metadata = NoteParser.ParseNote(filePath, content);
-            _notes[metadata.FileNameWithoutExtension] = metadata;
             return metadata;
         }
 
         private string GenerateFileNameFromTitle(string title)
         {
-
+            if (string.IsNullOrEmpty(title))
+            {
+                title = "Untitled_Note";
+            }
             char[] invalidChars = Path.GetInvalidFileNameChars();
             string fileName = title.Trim();
 

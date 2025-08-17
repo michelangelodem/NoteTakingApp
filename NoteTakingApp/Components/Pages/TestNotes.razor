@@ -1,0 +1,119 @@
+﻿@page "/test-notes"
+
+<style>
+    .test-notes-container {
+        max-width: 700px;
+        margin: 2rem auto;
+        background: #f8f9fa;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        padding: 2rem;
+    }
+    .test-notes-form label {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    .test-notes-form input, .test-notes-form textarea {
+        margin-bottom: 1rem;
+        width: 100%;
+    }
+    .test-notes-actions {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .test-notes-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 2rem;
+    }
+    .test-notes-table th, .test-notes-table td {
+        border: 1px solid #dee2e6;
+        padding: 0.5rem 1rem;
+        text-align: left;
+    }
+    .test-notes-table th {
+        background: #e9ecef;
+    }
+    .alert-success {
+        margin-top: 1rem;
+    }
+</style>
+
+<div class="test-notes-container">
+    <h2>Test Notes</h2>
+    <div class="test-notes-form">
+        <label for="title">Title</label>
+        <input id="title" @bind="_title" placeholder="Title" class="form-control" />
+
+        <label for="content">Content</label>
+        <textarea id="content" @bind="_content" placeholder="Content" class="form-control" rows="4"></textarea>
+    </div>
+    <div class="test-notes-actions">
+        <button class="btn btn-primary" @onclick="CreateNote">Create Note</button>
+        <button class="btn btn-secondary" @onclick="LoadNotes">Load Notes</button>
+    </div>
+
+    @if (_createdNote != null)
+    {
+        <div class="alert alert-success">
+            <strong>Note Created!</strong><br />
+            <b>FileName:</b> @_createdNote.FileName<br />
+            <b>DisplayTitle:</b> @_createdNote.DisplayTitle<br />
+            <b>Content:</b> <pre>@_createdNote.Content</pre>
+        </div>
+    }
+
+    @if (_loadedNotes != null && _loadedNotes.Count > 0)
+    {
+        <h4 class="mt-4">Loaded Notes</h4>
+        <table class="test-notes-table">
+            <thead>
+                <tr>
+                    <th>FileName</th>
+                    <th>DisplayTitle</th>
+                    <th>Content</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var note in _loadedNotes.Values)
+                {
+                    <tr>
+                        <td>@note.FileName</td>
+                        <td>@note.DisplayTitle</td>
+                        <td>
+                            <pre style="white-space: pre-wrap; max-width: 300px;">@note.Content</pre>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    } else if (_loadedNotes == null)
+    {
+        <div class="alert alert-info">No notes loaded.</div>
+	}
+</div>
+
+@code {
+	private string _title = "";
+	private string _content = "";
+	private readonly Configurations.NotesConfiguration _notesConfiguration = new Configurations.NotesConfiguration();
+    private Models.NoteMetadata? _createdNote;
+    private Dictionary<string, Models.NoteMetadata>? _loadedNotes = new();
+
+	private async Task CreateNote()
+	{
+		Services.Implementations.CreateNote noteCreator = new Services.Implementations.CreateNote(_notesConfiguration, _loadedNotes);
+        Console.WriteLine("NoteCreated");
+		_createdNote = await noteCreator.CreateNoteAsync(_title, _content);
+	}
+
+    private async Task LoadNotes()
+    {
+	    _loadedNotes.Clear();
+        Services.Implementations.LoadNotes noteLoader = new Services.Implementations.LoadNotes(_notesConfiguration, _loadedNotes);
+        Console.WriteLine("Notes loaded");
+        await noteLoader.LoadNotesAsync();
+        StateHasChanged();
+	}
+}
