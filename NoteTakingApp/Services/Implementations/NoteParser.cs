@@ -1,10 +1,13 @@
-﻿using NoteTakingApp.Services.Interfaces;
+﻿using NoteTakingApp.Configurations;
 using NoteTakingApp.Models;
+using NoteTakingApp.Services.Interfaces;
 
 namespace NoteTakingApp.Services.Implementations
 {
     public class NoteParser
     {
+        private static readonly NotesConfiguration _notesConfiguration = new NotesConfiguration();
+
         public static NoteMetadata ParseNote(string filePath, string contents)
         {
             var fileName = Path.GetFileName(filePath);
@@ -32,7 +35,7 @@ namespace NoteTakingApp.Services.Implementations
             metadata.UpdateLastModifiedDate();
             return metadata;
 
-            }
+        }
 
         private static string? GetFirstH1Header(string content)
         {
@@ -48,6 +51,7 @@ namespace NoteTakingApp.Services.Implementations
 
                     if (trimmedLine.StartsWith("# ") && trimmedLine.Length > 2)
                     {
+                        Console.WriteLine($"Parsing H1 Header: {trimmedLine}");
                         return trimmedLine.Substring(2).Trim(); // Remove the "# " prefix
                     }
                     else break;

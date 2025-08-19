@@ -23,6 +23,11 @@ builder.Services.AddSingleton<LoadNotes>(sp =>
     var config = sp.GetRequiredService<IOptions<NotesConfiguration>>().Value;
     return new LoadNotes(config, new Dictionary<string, NoteTakingApp.Models.NoteMetadata>());
 });
+builder.Services.AddSingleton<DeleteNote>(sp =>
+{
+    var config = sp.GetRequiredService<IOptions<NotesConfiguration>>().Value;
+    return new DeleteNote(config, new Dictionary<string, NoteTakingApp.Models.NoteMetadata>());
+});
 
 // Add Razor Pages and Blazor Server
 builder.Services.AddRazorPages();

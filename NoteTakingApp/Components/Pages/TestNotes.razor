@@ -1,4 +1,5 @@
 ﻿@page "/test-notes"
+@using NoteTakingApp.Models
 
 <style>
     .test-notes-container {
@@ -9,32 +10,39 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.07);
         padding: 2rem;
     }
+
     .test-notes-form label {
         font-weight: 600;
         margin-bottom: 0.25rem;
     }
+
     .test-notes-form input, .test-notes-form textarea {
         margin-bottom: 1rem;
         width: 100%;
     }
+
     .test-notes-actions {
         display: flex;
         gap: 1rem;
         margin-bottom: 2rem;
     }
+
     .test-notes-table {
         width: 100%;
         border-collapse: collapse;
         margin-top: 2rem;
     }
-    .test-notes-table th, .test-notes-table td {
-        border: 1px solid #dee2e6;
-        padding: 0.5rem 1rem;
-        text-align: left;
-    }
-    .test-notes-table th {
-        background: #e9ecef;
-    }
+
+        .test-notes-table th, .test-notes-table td {
+            border: 1px solid #dee2e6;
+            padding: 0.5rem 1rem;
+            text-align: left;
+        }
+
+        .test-notes-table th {
+            background: #e9ecef;
+        }
+
     .alert-success {
         margin-top: 1rem;
     }
@@ -73,6 +81,7 @@
                     <th>FileName</th>
                     <th>DisplayTitle</th>
                     <th>Content</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -82,38 +91,93 @@
                         <td>@note.FileName</td>
                         <td>@note.DisplayTitle</td>
                         <td>
-                            <pre style="white-space: pre-wrap; max-width: 300px;">@note.Content</pre>
+                            @if (_editingNoteTitle == note.FileNameWithoutExtension)
+                            {
+                                <textarea class="form-control" rows="4" @bind="_editContent"></textarea>
+                            }
+                            else
+                            {
+                                <pre style="white-space: pre-wrap; max-width: 300px;">@note.Content</pre>
+                            }
+                        </td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" @onclick="() => DeleteNote(note.FileNameWithoutExtension)">Delete</button>
+                            @if (_editingNoteTitle == note.FileNameWithoutExtension)
+                            {
+                                <button class="btn btn-primary btn-sm" @onclick="() => SaveEdit(note)">Save</button>
+                                <button class="btn btn-secondary btn-sm" @onclick="CancelEdit">Cancel</button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-secondary btn-sm" @onclick="() => StartEditing(note)">Edit</button>
+                            }
                         </td>
                     </tr>
                 }
             </tbody>
         </table>
-    } else if (_loadedNotes == null)
+    }
+    else if (_loadedNotes == null || _loadedNotes.Count == 0)
     {
         <div class="alert alert-info">No notes loaded.</div>
-	}
+    }
 </div>
 
 @code {
-	private string _title = "";
-	private string _content = "";
-	private readonly Configurations.NotesConfiguration _notesConfiguration = new Configurations.NotesConfiguration();
-    private Models.NoteMetadata? _createdNote;
-    private Dictionary<string, Models.NoteMetadata>? _loadedNotes = new();
+    private string _title = "";
+    private string _content = "";
+    private readonly Configurations.NotesConfiguration _notesConfiguration = new Configurations.NotesConfiguration();
+    private NoteMetadata? _createdNote;
+    private Dictionary<string, NoteMetadata> _loadedNotes = new();
 
-	private async Task CreateNote()
-	{
-		Services.Implementations.CreateNote noteCreator = new Services.Implementations.CreateNote(_notesConfiguration, _loadedNotes);
-        Console.WriteLine("NoteCreated");
-		_createdNote = await noteCreator.CreateNoteAsync(_title, _content);
-	}
+    // Editing state
+    private string? _editingNoteTitle = null;
+    private string _editContent = "";
+
+    private async Task CreateNote()
+    {
+        Services.Implementations.CreateNote noteCreator = new Services.Implementations.CreateNote(_notesConfiguration, _loadedNotes);
+        _createdNote = await noteCreator.CreateNoteAsync(_title, _content);
+    }
 
     private async Task LoadNotes()
     {
-	    _loadedNotes.Clear();
+        _loadedNotes.Clear();
         Services.Implementations.LoadNotes noteLoader = new Services.Implementations.LoadNotes(_notesConfiguration, _loadedNotes);
-        Console.WriteLine("Notes loaded");
         await noteLoader.LoadNotesAsync();
         StateHasChanged();
-	}
+    }
+
+    private async Task DeleteNote(string fileNameWithoutExtension)
+    {
+        Services.Implementations.DeleteNote noteDeleter = new Services.Implementations.DeleteNote(_notesConfiguration, _loadedNotes);
+        await noteDeleter.DeleteNoteAsync(fileNameWithoutExtension);
+        _createdNote = null;
+        StateHasChanged();
+    }
+
+    private void StartEditing(NoteMetadata note)
+    {
+        _editingNoteTitle = note.FileNameWithoutExtension;
+        _editContent = note.Content;
+    }
+
+    private void CancelEdit()
+    {
+        _editingNoteTitle = null;
+        _editContent = "";
+    }
+
+    private async Task SaveEdit(NoteMetadata note)
+    {
+        Services.Implementations.EditNote noteEditor = new Services.Implementations.EditNote(_notesConfiguration, _loadedNotes);
+        var updatedNote = await noteEditor.EditNoteAsync(note, _editContent);
+        if (updatedNote != null)
+        {
+            _loadedNotes[note.FileNameWithoutExtension] = updatedNote;
+        }
+        _editingNoteTitle = null;
+        _editContent = "";
+        StateHasChanged();
+    }
 }
