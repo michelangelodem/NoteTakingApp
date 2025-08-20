@@ -7,15 +7,16 @@ namespace NoteTakingApp.Services.Implementations
     public class NoteParser
     {
         private static readonly NotesConfiguration _notesConfiguration = new NotesConfiguration();
+        private static MetadataServices service = new MetadataServices();
 
         public static NoteMetadata ParseNote(string filePath, string contents)
         {
             var fileName = Path.GetFileName(filePath);
             var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
-            var wordCount = GetWordCount(contents);
+            var wordCount = service.CountWords(contents);
             var content = contents;
 
-            var h1Header = GetFirstH1Header(content);
+            var h1Header = service.ExtractTitleFromContent(contents);
             var hasH1Header = !(string.IsNullOrEmpty(h1Header));
             var displayTitle = hasH1Header 
                 ? h1Header
@@ -35,37 +36,6 @@ namespace NoteTakingApp.Services.Implementations
             metadata.UpdateLastModifiedDate();
             return metadata;
 
-        }
-
-        private static string? GetFirstH1Header(string content)
-        {
-            if (string.IsNullOrEmpty(content)) return null;
-            else  
-            {
-                var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                foreach (var line in lines)
-                {
-                    string trimmedLine = line.Trim();
-
-                    if (trimmedLine.Length == 0) continue;
-
-                    if (trimmedLine.StartsWith("# ") && trimmedLine.Length > 2)
-                    {
-                        Console.WriteLine($"Parsing H1 Header: {trimmedLine}");
-                        return trimmedLine.Substring(2).Trim(); // Remove the "# " prefix
-                    }
-                    else break;
-                }
-            }
-            return null;
-        }
-
-        private static int GetWordCount(string content)
-        {
-            if (string.IsNullOrEmpty(content)) return 0;
-
-            var words = content.Split(new[] { ' ', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-            return words.Length;
         }
     }
 }

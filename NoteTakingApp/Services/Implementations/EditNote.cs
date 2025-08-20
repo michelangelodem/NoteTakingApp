@@ -6,11 +6,13 @@ namespace NoteTakingApp.Services.Implementations{
     {
         private readonly NotesConfiguration _notesConfiguration; 
         private readonly Dictionary<string, NoteMetadata> _notes;
+        private static MetadataServices service;
         
         public EditNote(NotesConfiguration notesConfiguration, Dictionary<string, NoteMetadata> notes) 
         {
             _notesConfiguration = notesConfiguration;
             _notes = notes;
+            service = new MetadataServices();
         }
 
         public async Task<NoteMetadata?> EditNoteAsync(NoteMetadata oldNote, string newContent)
@@ -22,7 +24,7 @@ namespace NoteTakingApp.Services.Implementations{
                 return null;
             }
 
-            string? newTitle = ExtractTitleFromContent(newContent);
+            string? newTitle = service.ExtractTitleFromContent(newContent);
             string newFileName = oldNote.FileName;
             string newFileNameWithoutExtension = oldTitle;
             string newDisplayTitle = oldNote.DisplayTitle;
@@ -31,7 +33,7 @@ namespace NoteTakingApp.Services.Implementations{
             {
                 newDisplayTitle = newTitle;
                 newFileNameWithoutExtension = newTitle;
-                newFileName = GenerateFileNameFromTitle(newTitle);
+                newFileName = service.GenerateFileNameFromTitle(newTitle);
 
                 var oldFilePath = Path.Combine(_notesConfiguration.NotesDirectory, oldNote.FileName);
                 var newFilePath = Path.Combine(_notesConfiguration.NotesDirectory, newFileName);
@@ -56,39 +58,11 @@ namespace NoteTakingApp.Services.Implementations{
             }
 
             oldNote.Content = newContent;
-            oldNote.WordCount = CountWords(newContent);
+            oldNote.WordCount = service.CountWords(newContent);
             oldNote.UpdateLastModifiedDate();
 
             Console.WriteLine($"Note with title '{oldNote.DisplayTitle}' has been updated.");
             return oldNote;
-        }
-
-        private string? ExtractTitleFromContent(string content)
-        {
-            using var reader = new StringReader(content);
-            string? line;
-            while ((line = reader.ReadLine()) != null)
-            {
-                if (line.StartsWith("# "))
-                {
-                    return line.Substring(2).Trim();
-                }
-            }
-            return null;
-        }
-
-        private string GenerateFileNameFromTitle(string title)
-        {
-            var invalidChars = Path.GetInvalidFileNameChars(); 
-            var safeTitle = string.Join("_", title.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries)).Trim(); 
-            return $"{safeTitle}.md";
-        }
-
-        private int CountWords(string content)
-        {
-            if (string.IsNullOrWhiteSpace(content)) return 0; 
-            var words = content.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries); 
-            return words.Length;
         }
     }
 }
