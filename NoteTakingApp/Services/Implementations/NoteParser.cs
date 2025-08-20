@@ -1,41 +1,42 @@
-﻿using NoteTakingApp.Configurations;
+﻿using Microsoft.VisualBasic;
+using NoteTakingApp.Configurations;
 using NoteTakingApp.Models;
 using NoteTakingApp.Services.Interfaces;
 
 namespace NoteTakingApp.Services.Implementations
 {
-    public class NoteParser
+    public class NoteParser : INoteParser
     {
         private static readonly NotesConfiguration _notesConfiguration = new NotesConfiguration();
-        private static MetadataServices service = new MetadataServices();
+        private static IMetadataServices service = new MetadataServices();
+        private NoteMetadata _metadata;
 
-        public static NoteMetadata ParseNote(string filePath, string contents)
-        {
-            var fileName = Path.GetFileName(filePath);
-            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
-            var wordCount = service.CountWords(contents);
-            var content = contents;
+        public NoteMetadata Parse(string contents)
+        {       
+            SetNoteMetadata(contents);
 
-            var h1Header = service.ExtractTitleFromContent(contents);
-            var hasH1Header = !(string.IsNullOrEmpty(h1Header));
-            var displayTitle = hasH1Header 
-                ? h1Header
-                : fileNameWithoutExtension;
-
-            var metadata = new NoteMetadata
-            {
-                FileName = fileName,
-                FileNameWithoutExtension = fileNameWithoutExtension,
-                DisplayTitle = displayTitle ?? fileNameWithoutExtension,
-                ReferenceTitle = fileNameWithoutExtension, // Default to file name without extension
-                Content = content,
-                WordCount = wordCount,
-                LastModifiedDate = DateOnly.FromDateTime(DateTime.Now)
-            };
+            var metadata = _metadata;
 
             metadata.UpdateLastModifiedDate();
             return metadata;
 
+        }
+
+        private void SetNoteMetadata(string contents)
+        {
+            _metadata = new NoteMetadata();
+
+            var filePath = service.GetFilePathFromContent(contents);
+            _metadata.FileName = Path.GetFileName(filePath);
+            _metadata.FileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
+            _metadata.WordCount = service.CountWords(contents);
+            _metadata.Content = contents;
+
+            var h1Header = service.ExtractTitleFromContent(contents);
+            _metadata.HasH1Header = !(string.IsNullOrEmpty(h1Header));
+            _metadata.DisplayTitle = _metadata.HasH1Header
+                ? h1Header
+                : _metadata.FileNameWithoutExtension;
         }
     }
 }

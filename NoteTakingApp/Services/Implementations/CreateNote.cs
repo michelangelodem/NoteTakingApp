@@ -2,7 +2,6 @@
 using NoteTakingApp.Models;
 using NoteTakingApp.Services.Interfaces;
 using NoteTakingApp.Configurations;
-using NuGet.Packaging;
 
 namespace NoteTakingApp.Services.Implementations
 {
@@ -11,12 +10,14 @@ namespace NoteTakingApp.Services.Implementations
         private readonly NotesConfiguration _notesConfiguration;
         private readonly Dictionary<string, NoteMetadata> _notes;
         private static MetadataServices service;
+        private INoteParser _parser;
 
         public CreateNote(NotesConfiguration notesConfiguration, Dictionary<string, NoteMetadata> notes)
         {
             _notesConfiguration = notesConfiguration;
             _notes = notes;
             service = new MetadataServices();
+            _parser = new NoteParser();
         }
 
         public async Task<NoteMetadata> CreateNoteAsync(string title, string? initialContent = null)
@@ -36,7 +37,7 @@ namespace NoteTakingApp.Services.Implementations
             var content = service.FormatContent(initialContent, title);
 
             await File.WriteAllTextAsync(filePath, content);
-            var metadata = NoteParser.ParseNote(filePath, content);
+            var metadata = _parser.Parse(content);
             return metadata;
         }
     }

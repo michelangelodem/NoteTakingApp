@@ -9,11 +9,13 @@ namespace NoteTakingApp.Services.Implementations
     {
         private readonly NotesConfiguration _notesConfiguration;
         private readonly Dictionary<string /*title*/, NoteMetadata /*note*/ >? _notesCache;
+        private INoteParser _parser;
 
         public LoadNotes(NotesConfiguration notesConfiguration, Dictionary<string, NoteMetadata> notesCache)
         {
             _notesConfiguration = notesConfiguration;
             _notesCache = notesCache;
+            _parser = new NoteParser();
         }
 
         public async Task LoadNotesAsync()
@@ -24,7 +26,7 @@ namespace NoteTakingApp.Services.Implementations
             foreach (var file in files)
             {
                 var content = await File.ReadAllTextAsync(file);
-                var metadata = NoteParser.ParseNote(file, content);
+                var metadata = _parser.Parse(content);
                 if (metadata != null)
                 {
                     _notesCache[metadata.FileNameWithoutExtension] = metadata;

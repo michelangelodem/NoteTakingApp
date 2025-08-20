@@ -1,10 +1,12 @@
-﻿using NoteTakingApp.Components.Pages;
+﻿using NoteTakingApp.Services.Interfaces;
+using NoteTakingApp.Configurations;
 
 namespace NoteTakingApp.Services.Implementations
 {
-    public class MetadataServices
-    {
-        public MetadataServices () { }
+    public class MetadataServices : IMetadataServices
+    {   
+
+        public MetadataServices() {}
 
         public string GenerateFileNameFromTitle(string title)
         {
@@ -46,7 +48,7 @@ namespace NoteTakingApp.Services.Implementations
             return outputString;
         }
 
-        public string EnsureUniqueFilePath(string originalPath, int count)
+        public string EnsureUniqueFilePath(string originalPath, int fileQuantityInFolder)
         {
             if (!File.Exists(originalPath))
                 return originalPath;
@@ -57,7 +59,7 @@ namespace NoteTakingApp.Services.Implementations
 
             int counter = 1;
             string newPath = originalPath;
-            while (counter < count)
+            while (counter < fileQuantityInFolder)
             {
                 var newFileName = $"{fileNameWithoutExt}_{counter}";
                 newPath = Path.Combine(directory!, $"{newFileName}{extension}");
@@ -67,15 +69,15 @@ namespace NoteTakingApp.Services.Implementations
             return newPath;
         }
 
-        public string FormatContent(string? initialContent, string defaultMessage)
+        public string FormatContent(string? initialContent, string displayTitle)
         {
             if (string.IsNullOrEmpty(initialContent))
             {
-                return $"# {defaultMessage} \n\n";
+                return $"# {displayTitle} \n\n";
             }
             else if (!initialContent.TrimStart().StartsWith("# "))
             {
-                return $"# {defaultMessage} \n\n{initialContent}";
+                return $"# {displayTitle} \n\n{initialContent}";
             }
             return initialContent;
         }
@@ -101,6 +103,14 @@ namespace NoteTakingApp.Services.Implementations
                 }
             }
             return null;
+        }
+
+        public string GetFilePathFromContent(string content)
+        {
+            var displayTitle = ExtractTitleFromContent(content);
+            var fileName = GenerateFileNameFromTitle(displayTitle);
+            var filepath = Path.GetFullPath(fileName);
+            return filepath;
         }
 
         public int CountWords(string content)
