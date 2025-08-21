@@ -4,6 +4,9 @@ namespace NoteTakingApp.Services.Interfaces
 {
     public interface INoteService
     {
-        Task ExecuteAsync();
+        Task<NoteMetadata> CreateNoteAsync(string? initialContent = null);
+        Task<NoteMetadata> EditNoteAsync(string fileName, string content);
+        Task LoadNoteAsync(string filePath);
+        Task DeleteNoteAsync(string filePath);
     }
 }

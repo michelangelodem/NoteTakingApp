@@ -19,5 +19,22 @@ namespace NoteTakingApp.Models
         {
             LastModifiedDate = DateOnly.FromDateTime(DateTime.Now);
         }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is NoteMetadata other)
+            {
+                return FileName == other.FileName &&
+                       FileNameWithoutExtension == other.FileNameWithoutExtension &&
+                       DisplayTitle == other.DisplayTitle &&
+                       ReferenceTitle == other.ReferenceTitle &&
+                       HasH1Header == other.HasH1Header &&
+                       Content == other.Content &&
+                       WordCount == other.WordCount &&
+                       CreatedDate == other.CreatedDate &&
+                       LastModifiedDate == other.LastModifiedDate;
+            }
+            return false;
+        }
     }
 }

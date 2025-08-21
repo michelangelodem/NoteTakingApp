@@ -1,5 +1,7 @@
-﻿using NoteTakingApp.Services.Interfaces;
+﻿using Microsoft.CodeAnalysis;
 using NoteTakingApp.Configurations;
+using NoteTakingApp.Models;
+using NoteTakingApp.Services.Interfaces;
 
 namespace NoteTakingApp.Services.Implementations
 {
@@ -48,7 +50,7 @@ namespace NoteTakingApp.Services.Implementations
             return outputString;
         }
 
-        public string EnsureUniqueFilePath(string originalPath, int fileQuantityInFolder)
+        public string EnsureUniqueFilePath(string originalPath)
         {
             if (!File.Exists(originalPath))
                 return originalPath;
@@ -59,7 +61,7 @@ namespace NoteTakingApp.Services.Implementations
 
             int counter = 1;
             string newPath = originalPath;
-            while (counter < fileQuantityInFolder)
+            while (counter < Directory.GetFiles(originalPath).Length)
             {
                 var newFileName = $"{fileNameWithoutExt}_{counter}";
                 newPath = Path.Combine(directory!, $"{newFileName}{extension}");
@@ -105,19 +107,39 @@ namespace NoteTakingApp.Services.Implementations
             return null;
         }
 
-        public string GetFilePathFromContent(string content)
+        public string GetFilePathFromContent(string? content)
         {
             var displayTitle = ExtractTitleFromContent(content);
             var fileName = GenerateFileNameFromTitle(displayTitle);
-            var filepath = Path.GetFullPath(fileName);
+            var filepath = Path.Combine(new NotesConfiguration().NotesDirectory, fileName);
             return filepath;
         }
-
-        public int CountWords(string content)
+        
+        public int CountWords(string? content)
         {
             if (string.IsNullOrWhiteSpace(content)) return 0;
             var words = content.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
             return words.Length;
+        }
+
+        public NoteMetadata SetNoteMetadata(string contents)
+        {
+            var _metadata = new NoteMetadata();
+
+            string tempPath = GetFilePathFromContent(contents);
+            var filePath = EnsureUniqueFilePath(tempPath);
+            _metadata.FileName = Path.GetFileName(filePath);
+            _metadata.FileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
+            _metadata.WordCount = CountWords(contents);
+            _metadata.Content = contents;
+
+            var h1Header = ExtractTitleFromContent(contents);
+            _metadata.HasH1Header = !(string.IsNullOrEmpty(h1Header));
+            _metadata.DisplayTitle = _metadata.HasH1Header
+                ? h1Header
+                : _metadata.FileNameWithoutExtension;
+            
+            return _metadata;
         }
     }
 }

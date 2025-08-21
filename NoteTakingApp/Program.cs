@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Options;
 using NoteTakingApp.Configurations;
-using NoteTakingApp.Services.Implementations;
+using NoteTakingApp.Services.Commands;
 using NoteTakingApp.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);

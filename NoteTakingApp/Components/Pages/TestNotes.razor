@@ -1,5 +1,6 @@
 ﻿@page "/test-notes"
 @using NoteTakingApp.Models
+@using NoteTakingApp.Services.Commands
 
 <style>
     .test-notes-container {
@@ -136,21 +137,21 @@
 
     private async Task CreateNote()
     {
-        Services.Implementations.CreateNote noteCreator = new Services.Implementations.CreateNote(_notesConfiguration, _loadedNotes);
+        CreateNote noteCreator = new Services.Implementations.CreateNote(_notesConfiguration, _loadedNotes);
         _createdNote = await noteCreator.CreateNoteAsync(_title, _content);
     }
 
     private async Task LoadNotes()
     {
         _loadedNotes.Clear();
-        Services.Implementations.LoadNotes noteLoader = new Services.Implementations.LoadNotes(_notesConfiguration, _loadedNotes);
+        LoadNotes noteLoader = new Services.Implementations.LoadNotes(_notesConfiguration, _loadedNotes);
         await noteLoader.LoadNotesAsync();
         StateHasChanged();
     }
 
     private async Task DeleteNote(string fileNameWithoutExtension)
     {
-        Services.Implementations.DeleteNote noteDeleter = new Services.Implementations.DeleteNote(_notesConfiguration, _loadedNotes);
+        DeleteNote noteDeleter = new Services.Implementations.DeleteNote(_notesConfiguration, _loadedNotes);
         await noteDeleter.DeleteNoteAsync(fileNameWithoutExtension);
         _createdNote = null;
         StateHasChanged();
@@ -170,7 +171,7 @@
 
     private async Task SaveEdit(NoteMetadata note)
     {
-        Services.Implementations.EditNote noteEditor = new Services.Implementations.EditNote(_notesConfiguration, _loadedNotes);
+        EditNote noteEditor = new Services.Implementations.EditNote(_notesConfiguration, _loadedNotes);
         var updatedNote = await noteEditor.EditNoteAsync(note, _editContent);
         if (updatedNote != null)
         {
