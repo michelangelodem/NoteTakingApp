@@ -51,13 +51,14 @@ namespace NoteTakingApp.Services.Implementations
             return newNote;
         }
 
-        public async Task LoadNoteAsync(string filePath)
+        public async Task<Dictionary<string, NoteMetadata>> LoadNoteAsync(string filePath)
         {
             var notes = await _noteRepository.GetAllNoteFilesAsync();
             _noteCache = notes.ToDictionary(
                 n => n.FileNameWithoutExtension, 
                 n => n
                 );
+            return _noteCache;
         }
 
         public async Task DeleteNoteAsync(string filePath)
