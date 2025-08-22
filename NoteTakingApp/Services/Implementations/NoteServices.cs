@@ -5,7 +5,7 @@ using NoteTakingApp.Services.Interfaces;
 
 namespace NoteTakingApp.Services.Implementations
 {
-    public class NoteServices : INoteServices
+    public class NoteServices : INoteService
     {   
         private readonly NotesConfiguration _notesConfiguration; 
         private Dictionary<string /*FileNameWithoutExtension*/, NoteMetadata /*note*/>? _noteCache;
@@ -36,11 +36,18 @@ namespace NoteTakingApp.Services.Implementations
         }
 
         public async Task<NoteMetadata> EditNoteAsync(string fileName, string content)
-        {   
+        {      
             var updateNote = new UpdateNote(new NotesConfiguration());
 
             var oldNote = await _noteRepository.GetNoteFileAsync(fileName);
+            Console.WriteLine($"old note content:\n{oldNote.Content}");
+
+            Console.WriteLine($"Updating note: {fileName} with path: {Path.Combine(Path.GetDirectoryName(fileName), fileName)}");
+            
             var newNote = await updateNote.UpdateNoteAsync(oldNote, content);
+
+            Console.WriteLine($"old note content after new note creation:\n{oldNote.Content}");
+
             try {
                 await _noteRepository.UpdateNoteFileAsync(newNote, oldNote);
             }
@@ -51,7 +58,7 @@ namespace NoteTakingApp.Services.Implementations
             return newNote;
         }
 
-        public async Task<Dictionary<string, NoteMetadata>> LoadNoteAsync(string filePath)
+        public async Task<Dictionary<string, NoteMetadata>> LoadNoteAsync()
         {
             var notes = await _noteRepository.GetAllNoteFilesAsync();
             _noteCache = notes.ToDictionary(

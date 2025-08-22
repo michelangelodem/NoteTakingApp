@@ -1,9 +1,6 @@
-﻿using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using NoteTakingApp.Configurations;
 using NoteTakingApp.Services.Commands;
-using NoteTakingApp.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,17 +13,22 @@ builder.Services.AddSingleton<CreateNote>(sp =>
 {
     var config = sp.GetRequiredService<IOptions<NotesConfiguration>>().Value;
     // For demo/testing, pass an empty dictionary
-    return new CreateNote(config, new Dictionary<string, NoteTakingApp.Models.NoteMetadata>());
+    return new CreateNote(config);
 });
 builder.Services.AddSingleton<LoadNotes>(sp =>
 {
     var config = sp.GetRequiredService<IOptions<NotesConfiguration>>().Value;
-    return new LoadNotes(config, new Dictionary<string, NoteTakingApp.Models.NoteMetadata>());
+    return new LoadNotes();
 });
 builder.Services.AddSingleton<DeleteNote>(sp =>
 {
     var config = sp.GetRequiredService<IOptions<NotesConfiguration>>().Value;
-    return new DeleteNote(config, new Dictionary<string, NoteTakingApp.Models.NoteMetadata>());
+    return new DeleteNote();
+});
+builder.Services.AddSingleton<UpdateNote>(sp =>
+{
+    var config = sp.GetRequiredService<IOptions<NotesConfiguration>>().Value;
+    return new UpdateNote(config);
 });
 
 // Add Razor Pages and Blazor Server

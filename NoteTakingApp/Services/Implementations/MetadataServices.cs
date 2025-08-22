@@ -128,7 +128,7 @@ namespace NoteTakingApp.Services.Implementations
 
             string tempPath = GetFilePathFromContent(contents);
             var filePath = EnsureUniqueFilePath(tempPath);
-            _metadata.FileName = Path.GetFileName(filePath);
+            _metadata.FileName = Path.GetFileName(filePath) + ".md";
             _metadata.FileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
             _metadata.WordCount = CountWords(contents);
             _metadata.Content = contents;

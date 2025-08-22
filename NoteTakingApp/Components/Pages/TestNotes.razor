@@ -1,6 +1,7 @@
 ﻿@page "/test-notes"
 @using NoteTakingApp.Models
-@using NoteTakingApp.Services.Commands
+@using NoteTakingApp.Services.Interfaces
+@using NoteTakingApp.Services.Implementations
 
 <style>
     .test-notes-container {
@@ -47,137 +48,349 @@
     .alert-success {
         margin-top: 1rem;
     }
+
+    .alert-danger {
+        margin-top: 1rem;
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+        padding: 1rem;
+        border-radius: 0.25rem;
+    }
+
+    .alert-info {
+        margin-top: 1rem;
+        background-color: #d1ecf1;
+        border: 1px solid #bee5eb;
+        color: #0c5460;
+        padding: 1rem;
+        border-radius: 0.25rem;
+    }
 </style>
 
 <div class="test-notes-container">
-    <h2>Test Notes</h2>
+    <h2>Test Notes - INoteServices Interface</h2>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger">
+            <strong>Error:</strong> @_errorMessage
+        </div>
+    }
+
     <div class="test-notes-form">
-        <label for="title">Title</label>
-        <input id="title" @bind="_title" placeholder="Title" class="form-control" />
+        <label for="title">Title (Optional - will be extracted from content if H1 header exists)</label>
+        <input id="title" @bind="_title" placeholder="Optional: Enter title or leave blank to use H1 from content" class="form-control" />
 
         <label for="content">Content</label>
-        <textarea id="content" @bind="_content" placeholder="Content" class="form-control" rows="4"></textarea>
+        <textarea id="content" @bind="_content" placeholder="Enter note content. Use # Title for H1 header." class="form-control" rows="6"></textarea>
     </div>
+
     <div class="test-notes-actions">
-        <button class="btn btn-primary" @onclick="CreateNote">Create Note</button>
-        <button class="btn btn-secondary" @onclick="LoadNotes">Load Notes</button>
+        <button class="btn btn-primary" @onclick="CreateNote" disabled="@_isLoading">
+            @if (_isLoading && _currentOperation == "create")
+            {
+                <span>Creating...</span>
+            }
+            else
+            {
+                <span>Create Note</span>
+            }
+        </button>
+        <button class="btn btn-secondary" @onclick="LoadNotes" disabled="@_isLoading">
+            @if (_isLoading && _currentOperation == "load")
+            {
+                <span>Loading...</span>
+            }
+            else
+            {
+                <span>Load All Notes</span>
+            }
+        </button>
+        <button class="btn btn-info" @onclick="ClearResults">Clear Results</button>
     </div>
 
     @if (_createdNote != null)
     {
         <div class="alert alert-success">
-            <strong>Note Created!</strong><br />
+            <strong>Note Created Successfully!</strong><br />
             <b>FileName:</b> @_createdNote.FileName<br />
+            <b>FileNameWithoutExtension:</b> @_createdNote.FileNameWithoutExtension<br />
             <b>DisplayTitle:</b> @_createdNote.DisplayTitle<br />
-            <b>Content:</b> <pre>@_createdNote.Content</pre>
+            <b>HasH1Header:</b> @_createdNote.HasH1Header<br />
+            <b>WordCount:</b> @_createdNote.WordCount<br />
+            <b>CreatedDate:</b> @_createdNote.CreatedDate<br />
+            <b>LastModifiedDate:</b> @_createdNote.LastModifiedDate<br />
+            <b>Content Preview:</b><br />
+            <pre style="background: #f8f9fa; padding: 0.5rem; border-radius: 0.25rem;">@(_createdNote.Content.Length > 200 ? _createdNote.Content.Substring(0, 200) + "..." : _createdNote.Content)</pre>
         </div>
     }
 
-    @if (_loadedNotes != null && _loadedNotes.Count > 0)
+    @if (_loadedNotes != null && _loadedNotes.Any())
     {
-        <h4 class="mt-4">Loaded Notes</h4>
+        <h4 class="mt-4">Loaded Notes (@_loadedNotes.Count() notes)</h4>
         <table class="test-notes-table">
             <thead>
                 <tr>
                     <th>FileName</th>
                     <th>DisplayTitle</th>
-                    <th>Content</th>
-                    <th>Action</th>
+                    <th>WordCount</th>
+                    <th>HasH1</th>
+                    <th>Created</th>
+                    <th>Modified</th>
+                    <th>Content Preview</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var note in _loadedNotes.Values)
+                @foreach (NoteMetadata note in _loadedNotes.Values)
                 {
                     <tr>
                         <td>@note.FileName</td>
                         <td>@note.DisplayTitle</td>
+                        <td>@note.WordCount</td>
+                        <td>@(note.HasH1Header ? "Yes" : "No")</td>
+                        <td>@note.CreatedDate.ToString("yyyy-MM-dd")</td>
+                        <td>@note.LastModifiedDate.ToString("yyyy-MM-dd")</td>
                         <td>
-                            @if (_editingNoteTitle == note.FileNameWithoutExtension)
+                            @if (_editingNoteId == note.FileNameWithoutExtension)
                             {
-                                <textarea class="form-control" rows="4" @bind="_editContent"></textarea>
+                                <textarea class="form-control" rows="4" @bind="_editContent" style="min-width: 300px;"></textarea>
                             }
                             else
                             {
-                                <pre style="white-space: pre-wrap; max-width: 300px;">@note.Content</pre>
+                                <pre style="white-space: pre-wrap; max-width: 300px; max-height: 100px; overflow-y: auto; font-size: 0.85em;">@(note.Content.Length > 150 ? note.Content.Substring(0, 150) + "..." : note.Content)</pre>
                             }
                         </td>
                         <td>
-                            <button class="btn btn-danger btn-sm" @onclick="() => DeleteNote(note.FileNameWithoutExtension)">Delete</button>
-                            @if (_editingNoteTitle == note.FileNameWithoutExtension)
-                            {
-                                <button class="btn btn-primary btn-sm" @onclick="() => SaveEdit(note)">Save</button>
-                                <button class="btn btn-secondary btn-sm" @onclick="CancelEdit">Cancel</button>
-                            }
-                            else
-                            {
-                                <button class="btn btn-secondary btn-sm" @onclick="() => StartEditing(note)">Edit</button>
-                            }
+                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                @if (_editingNoteId == note.FileNameWithoutExtension)
+                                {
+                                    <button class="btn btn-success btn-sm" @onclick="() => SaveEdit(note)" disabled="@_isLoading">
+                                        @if (_isLoading && _currentOperation == "edit")
+                                        {
+                                            <span>Saving...</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Save</span>
+                                        }
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm" @onclick="CancelEdit" disabled="@_isLoading">Cancel</button>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-primary btn-sm" @onclick="() => StartEditing(note)" disabled="@_isLoading">Edit</button>
+                                }
+                                <button class="btn btn-danger btn-sm" @onclick="() => DeleteNote(note.FileNameWithoutExtension)" disabled="@_isLoading">
+                                    @if (_isLoading && _currentOperation == "delete" && _currentNoteId == note.FileNameWithoutExtension)
+                                    {
+                                        <span>Deleting...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Delete</span>
+                                    }
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 }
             </tbody>
         </table>
     }
-    else if (_loadedNotes == null || _loadedNotes.Count == 0)
+    else if (_notesLoaded && (_loadedNotes == null || !_loadedNotes.Any()))
     {
-        <div class="alert alert-info">No notes loaded.</div>
+        <div class="alert alert-info">No notes found in the directory.</div>
+    }
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success mt-3">
+            @_successMessage
+        </div>
     }
 </div>
 
 @code {
     private string _title = "";
     private string _content = "";
-    private readonly Configurations.NotesConfiguration _notesConfiguration = new Configurations.NotesConfiguration();
+    private INoteService _noteService;
     private NoteMetadata? _createdNote;
-    private Dictionary<string, NoteMetadata> _loadedNotes = new();
+    private Dictionary<string, NoteMetadata>? _loadedNotes;
+    private bool _notesLoaded = false;
+    private bool _isLoading = false;
+    private string _currentOperation = "";
+    private string _currentNoteId = "";
+    private string _errorMessage = "";
+    private string _successMessage = "";
 
     // Editing state
-    private string? _editingNoteTitle = null;
+    private string? _editingNoteId = null;
     private string _editContent = "";
+
+    protected override void OnInitialized()
+    {
+        _noteService = new NoteServices();
+    }
 
     private async Task CreateNote()
     {
-        CreateNote noteCreator = new Services.Implementations.CreateNote(_notesConfiguration, _loadedNotes);
-        _createdNote = await noteCreator.CreateNoteAsync(_title, _content);
+        _errorMessage = "";
+        _successMessage = "";
+        _isLoading = true;
+        _currentOperation = "create";
+
+        try
+        {
+            // Prepare content - if title is provided and content doesn't start with H1, prepend it
+            string contentToCreate = _content;
+            if (!string.IsNullOrWhiteSpace(_title) && !_content.TrimStart().StartsWith("# "))
+            {
+                contentToCreate = $"# {_title}\n\n{_content}";
+            }
+            else if (string.IsNullOrWhiteSpace(contentToCreate))
+            {
+                contentToCreate = string.IsNullOrWhiteSpace(_title) ? "# Untitled Note\n\n" : $"# {_title}\n\n";
+            }
+
+            _createdNote = await _noteService.CreateNoteAsync(contentToCreate);
+            _successMessage = "Note created successfully!";
+
+            // Clear form after successful creation
+            _title = "";
+            _content = "";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to create note: {ex.Message}";
+            _createdNote = null;
+        }
+        finally
+        {
+            _isLoading = false;
+            _currentOperation = "";
+            StateHasChanged();
+        }
     }
 
     private async Task LoadNotes()
     {
-        _loadedNotes.Clear();
-        LoadNotes noteLoader = new Services.Implementations.LoadNotes(_notesConfiguration, _loadedNotes);
-        await noteLoader.LoadNotesAsync();
-        StateHasChanged();
+        _errorMessage = "";
+        _successMessage = "";
+        _isLoading = true;
+        _currentOperation = "load";
+
+        try
+        {
+            _loadedNotes = await _noteService.LoadNoteAsync();
+            _notesLoaded = true;
+            _successMessage = $"Loaded {_loadedNotes.Count()} notes successfully!";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load notes: {ex.Message}";
+            _loadedNotes = null;
+        }
+        finally
+        {
+            _isLoading = false;
+            _currentOperation = "";
+            StateHasChanged();
+        }
     }
 
     private async Task DeleteNote(string fileNameWithoutExtension)
     {
-        DeleteNote noteDeleter = new Services.Implementations.DeleteNote(_notesConfiguration, _loadedNotes);
-        await noteDeleter.DeleteNoteAsync(fileNameWithoutExtension);
-        _createdNote = null;
-        StateHasChanged();
+        _errorMessage = "";
+        _successMessage = "";
+        _isLoading = true;
+        _currentOperation = "delete";
+        _currentNoteId = fileNameWithoutExtension;
+
+        try
+        {
+            var noteToDelete = _loadedNotes[fileNameWithoutExtension];
+            if (noteToDelete != null)
+            {
+                await _noteService.DeleteNoteAsync(noteToDelete.FileName);
+                _successMessage = $"Note '{noteToDelete.DisplayTitle}' deleted successfully!";
+
+                // Refresh the notes list
+                await LoadNotes();
+            }
+            else
+            {
+                _errorMessage = "Note not found for deletion.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to delete note: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            _currentOperation = "";
+            _currentNoteId = "";
+            StateHasChanged();
+        }
     }
 
     private void StartEditing(NoteMetadata note)
     {
-        _editingNoteTitle = note.FileNameWithoutExtension;
+        _editingNoteId = note.FileNameWithoutExtension;
         _editContent = note.Content;
+        _errorMessage = "";
+        _successMessage = "";
     }
 
     private void CancelEdit()
     {
-        _editingNoteTitle = null;
+        _editingNoteId = null;
         _editContent = "";
+        _errorMessage = "";
+        _successMessage = "";
     }
 
     private async Task SaveEdit(NoteMetadata note)
     {
-        EditNote noteEditor = new Services.Implementations.EditNote(_notesConfiguration, _loadedNotes);
-        var updatedNote = await noteEditor.EditNoteAsync(note, _editContent);
-        if (updatedNote != null)
+        _errorMessage = "";
+        _successMessage = "";
+        _isLoading = true;
+        _currentOperation = "edit";
+
+        try
         {
-            _loadedNotes[note.FileNameWithoutExtension] = updatedNote;
+            var updatedNote = await _noteService.EditNoteAsync(note.FileName, _editContent);
+            _successMessage = $"Note updated successfully!";
+
+            // Refresh the notes list to show updated content
+            await LoadNotes();
+
+            _editingNoteId = null;
+            _editContent = "";
         }
-        _editingNoteTitle = null;
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to update note: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            _currentOperation = "";
+            StateHasChanged();
+        }
+    }
+
+    private void ClearResults()
+    {
+        _createdNote = null;
+        _loadedNotes = null;
+        _notesLoaded = false;
+        _errorMessage = "";
+        _successMessage = "";
+        _editingNoteId = null;
         _editContent = "";
         StateHasChanged();
     }

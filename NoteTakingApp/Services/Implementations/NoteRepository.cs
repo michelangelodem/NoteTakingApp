@@ -1,4 +1,5 @@
-﻿using NoteTakingApp.Configurations;
+﻿using System.Diagnostics;
+using NoteTakingApp.Configurations;
 using NoteTakingApp.Models;
 using NoteTakingApp.Services.Interfaces;
 
@@ -18,8 +19,8 @@ namespace NoteTakingApp.Services.Implementations
         public async Task<NoteMetadata> GetNoteFileAsync(string fileName)
         {
             var n_metadata = new NoteMetadata();
-
-            var content = await File.ReadAllTextAsync(fileName);
+            var filePath = Path.Combine(_notesConfiguration.NotesDirectory, fileName);
+            var content = await File.ReadAllTextAsync(filePath);
             n_metadata = _noteParser.Parse(content);
             
             return n_metadata;
@@ -43,19 +44,25 @@ namespace NoteTakingApp.Services.Implementations
 
         public async Task AddNoteFileAsync(NoteMetadata note)
         {
+            string dir = _notesConfiguration.NotesDirectory;
+
             await Task.Run(async () =>
-            {
-                await File.WriteAllTextAsync(note.FileName, note.Content);
+            {   
+                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+
+                string pathToDir = Path.Combine(dir, note.FileName);
+                await File.WriteAllTextAsync(pathToDir, note.Content);
             });
         }
 
         public async Task DeleteNoteFileAsync(string fileName)
         {
+            var filePath = Path.Combine(_notesConfiguration.NotesDirectory, fileName);
             await Task.Run(() =>
             {
-                if (File.Exists(fileName))
+                if (File.Exists(filePath))
                 {
-                    File.Delete(fileName);
+                    File.Delete(filePath);
                 } 
                 else
                 {
@@ -66,12 +73,25 @@ namespace NoteTakingApp.Services.Implementations
 
         public async Task UpdateNoteFileAsync(NoteMetadata note, NoteMetadata oldNote)
         {
+            var oldFilePath = Path.Combine(_notesConfiguration.NotesDirectory, oldNote.FileName);
+            var newFilePath = Path.Combine(_notesConfiguration.NotesDirectory, note.FileName);
+           
+            Console.WriteLine($"new note:" +
+                              $"filename: {note.FileName}" +
+                              $"content: {note.Content}" +
+                              $"path: {newFilePath}");
+
+            Console.WriteLine($"old note:" +
+                              $"filename: {oldNote.FileName}" +
+                              $"content: {oldNote.Content}" +
+                              $"path: {oldFilePath}");
+
             if (note.DisplayTitle != oldNote.DisplayTitle)
             {
                 await Task.Run(async () =>
                 {
                     await DeleteNoteFileAsync(oldNote.FileName);
-                    await File.WriteAllTextAsync(note.FileName, note.Content);
+                    await File.WriteAllTextAsync(_notesConfiguration.NotesDirectory, note.Content);
                 });
             }
 
@@ -80,7 +100,7 @@ namespace NoteTakingApp.Services.Implementations
                 oldNote.Content = note.Content;
                 oldNote.WordCount = note.WordCount; 
                 oldNote.UpdateLastModifiedDate();
-                await File.WriteAllTextAsync(oldNote.FileName, oldNote.Content);
+                await File.WriteAllTextAsync(oldFilePath, oldNote.Content);
             }
 
             else throw new Exception("No changes detected in the note content or title.");
