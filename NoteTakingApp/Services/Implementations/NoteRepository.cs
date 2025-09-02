@@ -71,39 +71,20 @@ namespace NoteTakingApp.Services.Implementations
             });
         }
 
-        public async Task UpdateNoteFileAsync(NoteMetadata note, NoteMetadata oldNote)
+        public async Task UpdateNoteContentAsync(string content, string fileName)
         {
-            var oldFilePath = Path.Combine(_notesConfiguration.NotesDirectory, oldNote.FileName);
-            var newFilePath = Path.Combine(_notesConfiguration.NotesDirectory, note.FileName);
-           
-            Console.WriteLine($"new note:" +
-                              $"filename: {note.FileName}" +
-                              $"content: {note.Content}" +
-                              $"path: {newFilePath}");
-
-            Console.WriteLine($"old note:" +
-                              $"filename: {oldNote.FileName}" +
-                              $"content: {oldNote.Content}" +
-                              $"path: {oldFilePath}");
-
-            if (note.DisplayTitle != oldNote.DisplayTitle)
+            var filePath = Path.Combine(_notesConfiguration.NotesDirectory, fileName);
+            await Task.Run(() =>
             {
-                await Task.Run(async () =>
+                if (File.Exists(filePath))
                 {
-                    await DeleteNoteFileAsync(oldNote.FileName);
-                    await File.WriteAllTextAsync(_notesConfiguration.NotesDirectory, note.Content);
-                });
-            }
-
-            if (!note.Content.Equals(oldNote.Content) && note.DisplayTitle.Equals(oldNote.DisplayTitle))
-            {
-                oldNote.Content = note.Content;
-                oldNote.WordCount = note.WordCount; 
-                oldNote.UpdateLastModifiedDate();
-                await File.WriteAllTextAsync(oldFilePath, oldNote.Content);
-            }
-
-            else throw new Exception("No changes detected in the note content or title.");
+                    File.WriteAllText(filePath, content);
+                }
+                else
+                {
+                    throw new FileNotFoundException($"The file {fileName} does not exist.");
+                }
+            });
         }
     }
 }

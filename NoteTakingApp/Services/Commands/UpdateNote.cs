@@ -16,26 +16,24 @@ namespace NoteTakingApp.Services.Commands{
 
         public async Task<NoteMetadata?> UpdateNoteAsync(NoteMetadata oldNote, string newContent)
         {
-            NoteMetadata note = oldNote;
             var newNote = _noteParser.Parse(newContent);
             //The only time we need to update the note is when the content or title has changed
             //The only time we need to create a new note is when the title has changed
             //Any other change is an update to the existing note
 
-            if (newNote.FileName != oldNote.FileName) 
+            if (!newNote.FileName.Equals(oldNote.FileName)) 
             {
                 return newNote;
             }
 
-            if (!newNote.Content.Equals(oldNote.Content) && newNote.DisplayTitle.Equals(oldNote.DisplayTitle))
+            if (!newNote.Content.Equals(oldNote.Content) && newNote.FileName.Equals(oldNote.FileName))
             {
-                note.Content = newNote.Content;
-                note.WordCount = newNote.WordCount;
-                note.UpdateLastModifiedDate();
-                return note;
+                oldNote.Content = newNote.Content;
+                oldNote.WordCount = newNote.WordCount;
+                oldNote.UpdateLastModifiedDate();
             }
 
-            return note;
+            return oldNote;
         }
     }
 }

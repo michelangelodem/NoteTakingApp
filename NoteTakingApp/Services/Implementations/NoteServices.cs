@@ -40,21 +40,15 @@ namespace NoteTakingApp.Services.Implementations
             var updateNote = new UpdateNote(new NotesConfiguration());
 
             var oldNote = await _noteRepository.GetNoteFileAsync(fileName);
-            Console.WriteLine($"old note content:\n{oldNote.Content}");
+            Console.WriteLine($"{oldNote.Content}");
 
-            Console.WriteLine($"Updating note: {fileName} with path: {Path.Combine(Path.GetDirectoryName(fileName), fileName)}");
-            
             var newNote = await updateNote.UpdateNoteAsync(oldNote, content);
-
-            Console.WriteLine($"old note content after new note creation:\n{oldNote.Content}");
-
-            try {
-                await _noteRepository.UpdateNoteFileAsync(newNote, oldNote);
-            }
-            catch (Exception ex) {
-                throw new Exception("Error updating note", ex);
-            }
+            Console.WriteLine($"{newNote.Content}");
+            
+            await _noteRepository.DeleteNoteFileAsync(oldNote.FileName); 
+            await _noteRepository.AddNoteFileAsync(newNote);
             _noteCache[newNote.FileNameWithoutExtension] = newNote;
+
             return newNote;
         }
 

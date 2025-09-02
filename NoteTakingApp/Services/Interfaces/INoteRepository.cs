@@ -8,6 +8,6 @@ namespace NoteTakingApp.Services.Interfaces
         public Task<IEnumerable<NoteMetadata>> GetAllNoteFilesAsync();
         public Task AddNoteFileAsync(NoteMetadata note);
         public Task DeleteNoteFileAsync(string fileName);
-        public Task UpdateNoteFileAsync(NoteMetadata note, NoteMetadata oldNote);
+        public Task UpdateNoteContentAsync(string content, string fileName);
     }
 }

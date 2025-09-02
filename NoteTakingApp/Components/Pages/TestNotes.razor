@@ -3,6 +3,8 @@
 @using NoteTakingApp.Services.Interfaces
 @using NoteTakingApp.Services.Implementations
 
+@inject IServiceProvider ServiceProvider
+
 <style>
     .test-notes-container {
         max-width: 700px;
@@ -69,7 +71,7 @@
 </style>
 
 <div class="test-notes-container">
-    <h2>Test Notes - INoteServices Interface</h2>
+    <h2>Test INoteService & NoteServices Implementation</h2>
 
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
@@ -79,7 +81,7 @@
     }
 
     <div class="test-notes-form">
-        <label for="title">Title (Optional - will be extracted from content if H1 header exists)</label>
+        <label for="title">Title (optional)</label>
         <input id="title" @bind="_title" placeholder="Optional: Enter title or leave blank to use H1 from content" class="form-control" />
 
         <label for="content">Content</label>
@@ -115,9 +117,7 @@
         <div class="alert alert-success">
             <strong>Note Created Successfully!</strong><br />
             <b>FileName:</b> @_createdNote.FileName<br />
-            <b>FileNameWithoutExtension:</b> @_createdNote.FileNameWithoutExtension<br />
             <b>DisplayTitle:</b> @_createdNote.DisplayTitle<br />
-            <b>HasH1Header:</b> @_createdNote.HasH1Header<br />
             <b>WordCount:</b> @_createdNote.WordCount<br />
             <b>CreatedDate:</b> @_createdNote.CreatedDate<br />
             <b>LastModifiedDate:</b> @_createdNote.LastModifiedDate<br />
@@ -143,7 +143,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (NoteMetadata note in _loadedNotes.Values)
+                @foreach (var note in _loadedNotes.Values)
                 {
                     <tr>
                         <td>@note.FileName</td>
@@ -217,6 +217,7 @@
     private string _content = "";
     private INoteService _noteService;
     private NoteMetadata? _createdNote;
+    private NoteMetadata? _editedNote;
     private Dictionary<string, NoteMetadata>? _loadedNotes;
     private bool _notesLoaded = false;
     private bool _isLoading = false;
@@ -231,7 +232,8 @@
 
     protected override void OnInitialized()
     {
-        _noteService = new NoteServices();
+        // Use DI if available, otherwise fallback to direct instantiation
+        _noteService = ServiceProvider.GetService(typeof(INoteService)) as INoteService ?? new NoteServices();
     }
 
     private async Task CreateNote()
@@ -243,7 +245,6 @@
 
         try
         {
-            // Prepare content - if title is provided and content doesn't start with H1, prepend it
             string contentToCreate = _content;
             if (!string.IsNullOrWhiteSpace(_title) && !_content.TrimStart().StartsWith("# "))
             {
@@ -256,8 +257,6 @@
 
             _createdNote = await _noteService.CreateNoteAsync(contentToCreate);
             _successMessage = "Note created successfully!";
-
-            // Clear form after successful creation
             _title = "";
             _content = "";
         }
@@ -315,8 +314,6 @@
             {
                 await _noteService.DeleteNoteAsync(noteToDelete.FileName);
                 _successMessage = $"Note '{noteToDelete.DisplayTitle}' deleted successfully!";
-
-                // Refresh the notes list
                 await LoadNotes();
             }
             else
@@ -362,18 +359,16 @@
 
         try
         {
-            var updatedNote = await _noteService.EditNoteAsync(note.FileName, _editContent);
+            _editedNote = await _noteService.EditNoteAsync(note.FileName, _editContent);
             _successMessage = $"Note updated successfully!";
-
-            // Refresh the notes list to show updated content
             await LoadNotes();
-
             _editingNoteId = null;
             _editContent = "";
         }
         catch (Exception ex)
         {
             _errorMessage = $"Failed to update note: {ex.Message}";
+			_editedNote = null;
         }
         finally
         {
