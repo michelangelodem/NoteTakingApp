@@ -1,0 +1,347 @@
+﻿@page "/note/edit/{FileName}"
+@using NoteTakingApp.Configurations
+@using NoteTakingApp.Services.Interfaces
+@using NoteTakingApp.Models
+@using NoteTakingApp.Services.Implementations
+@inject INoteService NoteService
+@inject NavigationManager Navigation
+
+<PageTitle>Edit Note - NoteTaking App</PageTitle>
+
+@if (isLoading)
+{
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading note...</p>
+            </div>
+        </div>
+    </div>
+}
+else if (currentNote != null)
+{
+    <div class="container-fluid">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h1>
+                        <i class="bi bi-pencil text-primary"></i>
+                        Edit: @currentNote.DisplayTitle
+                    </h1>
+                    <div class="d-flex gap-2">
+                        <a href="notes" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Notes
+                        </a>
+                        <button class="btn btn-outline-danger" @onclick="DeleteCurrentNote">
+                            <i class="bi bi-trash"></i> Delete Note
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <small class="text-muted">
+                                    <i class="bi bi-file-earmark"></i>
+                                    <strong>File:</strong> @currentNote.FileName
+                                </small>
+                            </div>
+                            <div class="col-md-3">
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar-plus"></i>
+                                    <strong>Created:</strong> @currentNote.CreatedDate.ToString("MMM dd, yyyy")
+                                </small>
+                            </div>
+                            <div class="col-md-3">
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar"></i>
+                                    <strong>Modified:</strong> @currentNote.LastModifiedDate.ToString("MMM dd, yyyy")
+                                </small>
+                            </div>
+                            <div class="col-md-3">
+                                <small class="text-muted">
+                                    <i class="bi bi-body-text"></i>
+                                    <strong>Words:</strong> @wordCount
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-pencil"></i> Editor
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form @onsubmit="SaveNote" @onsubmit:preventDefault="true">
+                            <div class="mb-3">
+                                <label for="noteContent" class="form-label">Note Content (Markdown)</label>
+                                <textarea id="noteContent"
+                                          class="form-control font-monospace"
+                                          rows="20"
+                                          @bind="noteContent"
+                                          @oninput="OnContentChange"></textarea>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                                    @if (isSaving)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    <i class="bi bi-floppy"></i> Save Changes
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" @onclick="RevertChanges">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Revert Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-eye"></i> Preview
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (!string.IsNullOrEmpty(noteContent))
+                        {
+                            <div class="preview-content">
+                                @((MarkupString)ConvertMarkdownToHtml(noteContent))
+                            </div>
+
+                            <hr class="my-3" />
+
+                            <div class="text-muted small">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Word Count:</strong> @wordCount
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Character Count:</strong> @characterCount
+                                    </div>
+                                </div>
+                                @if (hasUnsavedChanges)
+                                {
+                                    <div class="mt-2">
+                                        <span class="badge bg-warning">
+                                            <i class="bi bi-exclamation-triangle"></i> Unsaved changes
+                                        </span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted">No content to preview...</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="alert @(messageIsError ? "alert-danger" : "alert-success")">
+                        <i class="bi @(messageIsError ? "bi-exclamation-triangle" : "bi-check-circle")"></i>
+                        @message
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12 text-center py-5">
+                <i class="bi bi-file-x display-1 text-muted"></i>
+                <h3 class="text-muted">Note not found</h3>
+                <p class="text-muted">The requested note could not be loaded.</p>
+                <a href="notes" class="btn btn-primary">
+                    <i class="bi bi-arrow-left"></i> Back to Notes
+                </a>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string FileName { get; set; } = string.Empty;
+
+    private NoteMetadata? currentNote;
+    private string noteContent = string.Empty;
+    private string originalContent = string.Empty;
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string message = string.Empty;
+    private bool messageIsError = false;
+    private int wordCount = 0;
+    private int characterCount = 0;
+    private bool hasUnsavedChanges = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadNote();
+    }
+
+    private async Task LoadNote()
+    {
+        try
+        {   
+            isLoading = true;
+            NotesConfiguration note_config = new NotesConfiguration();
+            INoteRepository note_repo = new NoteRepository(note_config);
+            currentNote = await note_repo.GetNoteFileAsync(FileName);
+            if (currentNote != null)
+            {
+                noteContent = currentNote.Content;
+                originalContent = currentNote.Content;
+                UpdateCounts();
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error loading note: {ex.Message}", true);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OnContentChange(ChangeEventArgs e)
+    {
+        noteContent = e.Value?.ToString() ?? string.Empty;
+        hasUnsavedChanges = noteContent != originalContent;
+        UpdateCounts();
+    }
+
+    private void UpdateCounts()
+    {
+        characterCount = noteContent.Length;
+        wordCount = string.IsNullOrWhiteSpace(noteContent)
+            ? 0
+            : noteContent.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        StateHasChanged();
+    }
+
+    private async Task SaveNote()
+    {
+        if (currentNote == null) return;
+
+        try
+        {
+            isSaving = true;
+            message = string.Empty;
+
+            var updatedNote = await NoteService.EditNoteAsync(currentNote.FileName, noteContent);
+
+            if (updatedNote.FileName != currentNote.FileName)
+            {
+                // Note was renamed, navigate to new URL
+                Navigation.NavigateTo($"/note/edit/{updatedNote.FileName}");
+                return;
+            }
+
+            currentNote = updatedNote;
+            originalContent = noteContent;
+            hasUnsavedChanges = false;
+            ShowMessage("Note saved successfully!", false);
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error saving note: {ex.Message}", true);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void RevertChanges()
+    {
+        noteContent = originalContent;
+        hasUnsavedChanges = false;
+        UpdateCounts();
+        ShowMessage("Changes reverted.", false);
+    }
+
+    private async Task DeleteCurrentNote()
+    {
+        if (currentNote == null) return;
+
+        try
+        {
+            await NoteService.DeleteNoteAsync(currentNote.FileName);
+            Navigation.NavigateTo("/notes");
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error deleting note: {ex.Message}", true);
+        }
+    }
+
+    private void ShowMessage(string msg, bool isError)
+    {
+        message = msg;
+        messageIsError = isError;
+        StateHasChanged();
+
+        // Clear message after 3 seconds
+        _ = Task.Delay(3000).ContinueWith(_ =>
+        {
+            message = string.Empty;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private string ConvertMarkdownToHtml(string markdown)
+    {
+        if (string.IsNullOrEmpty(markdown)) return string.Empty;
+
+        // Basic Markdown to HTML conversion
+        var html = markdown;
+
+        // Headers
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^### (.+)$", "<h3>$1</h3>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^## (.+)$", "<h2>$1</h2>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^# (.+)$", "<h1>$1</h1>", System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        // Bold and Italic
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*(.+?)\*", "<em>$1</em>");
+
+        // Code
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"`(.+?)`", "<code>$1</code>");
+
+        // Links
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\[(.+?)\]\((.+?)\)", "<a href=\"$2\">$1</a>");
+
+        // Line breaks
+        html = html.Replace("\n", "<br/>");
+
+        return html;
+    }
+}

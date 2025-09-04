@@ -1,0 +1,210 @@
+﻿@page "/note/create"
+@using NoteTakingApp.Services.Interfaces
+@inject INoteService NoteService
+@inject NavigationManager Navigation
+
+<PageTitle>Create Note - NoteTaking App</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1>
+                    <i class="bi bi-plus-circle text-primary"></i>
+                    Create New Note
+                </h1>
+                <a href="notes" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Notes
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-pencil"></i> Editor
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form @onsubmit="CreateNoteAsync" @onsubmit:preventDefault="true">
+                        <div class="mb-3">
+                            <label for="noteContent" class="form-label">Note Content (Markdown)</label>
+								<textarea id="noteContent"
+                                      class="form-control font-monospace"
+                                      rows="20"
+                                      @bind="noteContent"
+                                      @oninput="OnContentChange"
+                                      placeholder="# Your Note Title
+
+								Start writing your note here. Use Markdown syntax for formatting.
+
+								## Examples:
+								- **Bold text**
+								- *Italic text*
+								- [Links](https://example.com)
+								- `Code snippets`
+
+								### Lists:
+								1. Numbered item
+								2. Another item
+
+								- Bullet point
+								- Another bullet">
+
+							</textarea>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary" disabled="@isCreating">
+                                @if (isCreating)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                }
+                                <i class="bi bi-floppy"></i> Create Note
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="ClearContent">
+                                <i class="bi bi-x-circle"></i> Clear
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-eye"></i> Preview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(noteContent))
+                    {
+                        <div class="preview-content">
+                            @((MarkupString)ConvertMarkdownToHtml(noteContent))
+                        </div>
+
+                        <hr class="my-3" />
+
+                        <div class="text-muted small">
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Word Count:</strong> @wordCount
+                                </div>
+                                <div class="col-6">
+                                    <strong>Character Count:</strong> @characterCount
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Start typing to see a preview of your note...</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    @errorMessage
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string noteContent = string.Empty;
+    private bool isCreating = false;
+    private string errorMessage = string.Empty;
+    private int wordCount = 0;
+    private int characterCount = 0;
+
+    private void OnContentChange(ChangeEventArgs e)
+    {
+        noteContent = e.Value?.ToString() ?? string.Empty;
+        UpdateCounts();
+    }
+
+    private void UpdateCounts()
+    {
+        characterCount = noteContent.Length;
+        wordCount = string.IsNullOrWhiteSpace(noteContent)
+            ? 0
+            : noteContent.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        StateHasChanged();
+    }
+
+    private async Task CreateNoteAsync()
+    {
+        if (string.IsNullOrWhiteSpace(noteContent))
+        {
+            errorMessage = "Please enter some content for your note.";
+            return;
+        }
+
+        try
+        {
+            isCreating = true;
+            errorMessage = string.Empty;
+
+            var createdNote = await NoteService.CreateNoteAsync(noteContent);
+
+            // Navigate to the edit page of the newly created note
+            Navigation.NavigateTo($"/note/edit/{createdNote.FileName}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error creating note: {ex.Message}";
+        }
+        finally
+        {
+            isCreating = false;
+        }
+    }
+
+    private void ClearContent()
+    {
+        noteContent = string.Empty;
+        errorMessage = string.Empty;
+        UpdateCounts();
+    }
+
+    private string ConvertMarkdownToHtml(string markdown)
+    {
+        if (string.IsNullOrEmpty(markdown)) return string.Empty;
+
+        // Basic Markdown to HTML conversion
+        var html = markdown;
+
+        // Headers
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^### (.+)$", "<h3>$1</h3>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^## (.+)$", "<h2>$1</h2>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^# (.+)$", "<h1>$1</h1>", System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        // Bold and Italic
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*(.+?)\*", "<em>$1</em>");
+
+        // Code
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"`(.+?)`", "<code>$1</code>");
+
+        // Links
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\[(.+?)\]\((.+?)\)", "<a href=\"$2\">$1</a>");
+
+        // Line breaks
+        html = html.Replace("\n", "<br/>");
+
+        return html;
+    }
+}
