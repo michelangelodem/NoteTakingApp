@@ -1,96 +1,383 @@
+/* Enhanced MainLayout.razor.css with Dark Theme and Responsive Design */
+
 .page {
     position: relative;
     display: flex;
     flex-direction: column;
+    min-height: 100vh;
+    background-color: var(--bg-primary);
 }
 
 main {
     flex: 1;
+    background-color: var(--bg-primary);
+    transition: margin-left var(--transition-normal);
 }
 
+/* Enhanced Sidebar with Dark Theme */
 .sidebar {
-    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+    background: linear-gradient(180deg, #1a1f36 0%, #2d1b3d 70%);
+    border-right: 1px solid var(--border-primary);
+    box-shadow: var(--shadow-md);
+    transition: transform var(--transition-normal);
+    z-index: 1000;
 }
 
+/* Enhanced Top Row */
 .top-row {
-    background-color: #f7f7f7;
-    border-bottom: 1px solid #d6d5d5;
+    background: linear-gradient(90deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+    border-bottom: 1px solid var(--border-primary);
     justify-content: flex-end;
     height: 3.5rem;
     display: flex;
     align-items: center;
+    backdrop-filter: blur(8px);
+    position: relative;
 }
 
-    .top-row ::deep a, .top-row ::deep .btn-link {
+    .top-row::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(13, 17, 23, 0.8);
+        z-index: -1;
+    }
+
+    .top-row ::deep a,
+    .top-row ::deep .btn-link {
         white-space: nowrap;
-        margin-left: 1.5rem;
+        margin-left: var(--space-lg);
         text-decoration: none;
+        color: var(--text-secondary);
+        font-weight: 500;
+        padding: var(--space-xs) var(--space-sm);
+        border-radius: var(--radius-sm);
+        transition: all var(--transition-fast);
+        position: relative;
     }
 
-    .top-row ::deep a:hover, .top-row ::deep .btn-link:hover {
-        text-decoration: underline;
-    }
+        .top-row ::deep a:hover,
+        .top-row ::deep .btn-link:hover {
+            color: var(--text-primary);
+            background-color: rgba(255, 255, 255, 0.1);
+            text-decoration: none;
+            transform: translateY(-1px);
+        }
 
-    .top-row ::deep a:first-child {
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+        .top-row ::deep a:first-child {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
+/* Mobile-First Responsive Design */
 @media (max-width: 640.98px) {
     .top-row {
         justify-content: space-between;
+        padding: 0 var(--space-md);
+        height: 3.5rem;
     }
 
-    .top-row ::deep a, .top-row ::deep .btn-link {
-        margin-left: 0;
+        .top-row ::deep a,
+        .top-row ::deep .btn-link {
+            margin-left: 0;
+            font-size: var(--text-sm);
+        }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 280px;
+        height: 100vh;
+        transform: translateX(-100%);
+        z-index: 1050;
+        box-shadow: var(--shadow-lg);
+    }
+
+        .sidebar.show {
+            transform: translateX(0);
+        }
+
+    /* Overlay for mobile sidebar */
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1040;
+        opacity: 0;
+        visibility: hidden;
+        transition: all var(--transition-normal);
+    }
+
+        .sidebar-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+    main {
+        padding-top: 0;
     }
 }
 
-@media (min-width: 641px) {
+/* Tablet Design */
+@media (min-width: 641px) and (max-width: 1024px) {
     .page {
         flex-direction: row;
     }
 
     .sidebar {
-        width: 250px;
+        width: 260px;
         height: 100vh;
         position: sticky;
         top: 0;
+        flex-shrink: 0;
     }
 
     .top-row {
         position: sticky;
         top: 0;
-        z-index: 1;
-    }
-
-    .top-row.auth ::deep a:first-child {
-        flex: 1;
-        text-align: right;
-        width: 0;
+        z-index: 100;
+        padding: 0 var(--space-lg);
     }
 
     .top-row, article {
-        padding-left: 2rem !important;
-        padding-right: 1.5rem !important;
+        padding-left: var(--space-lg) !important;
+        padding-right: var(--space-lg) !important;
     }
 }
 
+/* Desktop Design */
+@media (min-width: 1025px) {
+    .page {
+        flex-direction: row;
+    }
+
+    .sidebar {
+        width: 280px;
+        height: 100vh;
+        position: sticky;
+        top: 0;
+        flex-shrink: 0;
+    }
+
+    .top-row {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        padding: 0 var(--space-xl);
+    }
+
+        .top-row.auth ::deep a:first-child {
+            flex: 1;
+            text-align: right;
+            width: 0;
+        }
+
+    .top-row, article {
+        padding-left: var(--space-xl) !important;
+        padding-right: var(--space-xl) !important;
+    }
+
+    /* Enhanced hover effects for desktop */
+    .sidebar:hover {
+        box-shadow: var(--shadow-lg);
+    }
+}
+
+/* Ultra-wide screen support */
+@media (min-width: 1400px) {
+    .sidebar {
+        width: 320px;
+    }
+
+    .top-row, article {
+        padding-left: var(--space-2xl) !important;
+        padding-right: var(--space-2xl) !important;
+    }
+}
+
+/* Enhanced Error UI */
 #blazor-error-ui {
-    background: lightyellow;
+    background: linear-gradient(135deg, var(--accent-danger), #dc2626 100%);
+    color: white;
     bottom: 0;
-    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-lg);
     display: none;
     left: 0;
-    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    padding: var(--space-md) var(--space-lg);
     position: fixed;
     width: 100%;
-    z-index: 1000;
+    z-index: 2000;
+    border-top: 2px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    animation: slideInUp var(--transition-normal) ease-out;
 }
 
-    #blazor-error-ui .dismiss {
-        cursor: pointer;
-        position: absolute;
-        right: 0.75rem;
-        top: 0.5rem;
+@keyframes slideInUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
     }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: var(--space-md);
+    top: 50%;
+    transform: translateY(-50%);
+    color: white;
+    font-size: var(--text-lg);
+    font-weight: bold;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.2);
+    transition: all var(--transition-fast);
+}
+
+    #blazor-error-ui .dismiss:hover {
+        background-color: rgba(255, 255, 255, 0.3);
+        transform: translateY(-50%) scale(1.1);
+    }
+
+/* Focus management for accessibility */
+.sidebar:focus-within {
+    box-shadow: 0 0 0 2px var(--accent-secondary);
+}
+
+/* Smooth scrolling for sidebar content */
+.sidebar * {
+    scroll-behavior: smooth;
+}
+
+/* Loading states */
+.page.loading {
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+    .page.loading::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, transparent, var(--accent-secondary), transparent);
+        animation: loading 2s infinite;
+        z-index: 9999;
+    }
+
+@keyframes loading {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100vw);
+    }
+}
+
+/* Print styles */
+@media print {
+    .sidebar {
+        display: none !important;
+    }
+
+    .top-row {
+        display: none !important;
+    }
+
+    main {
+        margin-left: 0 !important;
+        padding: 0 !important;
+    }
+
+    .page {
+        flex-direction: column;
+    }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .sidebar {
+        background: #000000;
+        border-right: 2px solid #ffffff;
+    }
+
+    .top-row {
+        background: #000000;
+        border-bottom: 2px solid #ffffff;
+    }
+
+        .top-row ::deep a {
+            color: #ffffff;
+            border: 1px solid #ffffff;
+        }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .sidebar,
+    .top-row ::deep a,
+    #blazor-error-ui,
+    .page.loading::after {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+/* Dark mode specific enhancements */
+@media (prefers-color-scheme: dark) {
+    .sidebar {
+        background: linear-gradient(180deg, #0f1419 0%, #1c1f26 70%);
+    }
+
+    .top-row {
+        background: linear-gradient(90deg, #0d1117 0%, #161b22 100%);
+    }
+}
+
+/* Browser zoom support */
+@media (min-resolution: 1.5dppx) {
+    .sidebar {
+        border-right-width: 0.5px;
+    }
+
+    .top-row {
+        border-bottom-width: 0.5px;
+    }
+}
+
+/* Container queries support (future-proofing) */
+@container (min-width: 768px) {
+    .sidebar {
+        width: 300px;
+    }
+}
+
+/* Backdrop filter fallback */
+@supports not (backdrop-filter: blur(8px)) {
+    .top-row {
+        background: var(--bg-secondary);
+    }
+
+        .top-row::before {
+            display: none;
+        }
+}

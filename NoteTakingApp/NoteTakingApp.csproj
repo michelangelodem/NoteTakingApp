@@ -22,4 +22,9 @@
     <Folder Include="Tests\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="wwwroot\css\FormControls.css" />
+    <None Include="wwwroot\css\Typography.css" />
+  </ItemGroup>
+
 </Project>
