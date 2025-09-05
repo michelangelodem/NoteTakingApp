@@ -3,6 +3,7 @@
 @using NoteTakingApp.Services.Interfaces
 @using NoteTakingApp.Models
 @using NoteTakingApp.Services.Implementations
+@using NoteTakingApp.Services.Implementations.TextConverters
 @inject INoteService NoteService
 @inject NavigationManager Navigation
 
@@ -240,11 +241,9 @@ else
 
     private void UpdateCounts()
     {
-        characterCount = noteContent.Length;
-        wordCount = string.IsNullOrWhiteSpace(noteContent)
-            ? 0
-            : noteContent.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
-        StateHasChanged();
+	    IMetadataServices metadataService = new MetadataServices();
+	    (characterCount, wordCount) = metadataService.UpdateCount(noteContent);
+	    
     }
 
     private async Task SaveNote()
@@ -319,29 +318,7 @@ else
 
     private string ConvertMarkdownToHtml(string markdown)
     {
-        if (string.IsNullOrEmpty(markdown)) return string.Empty;
-
-        // Basic Markdown to HTML conversion
-        var html = markdown;
-
-        // Headers
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"^### (.+)$", "<h3>$1</h3>", System.Text.RegularExpressions.RegexOptions.Multiline);
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"^## (.+)$", "<h2>$1</h2>", System.Text.RegularExpressions.RegexOptions.Multiline);
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"^# (.+)$", "<h1>$1</h1>", System.Text.RegularExpressions.RegexOptions.Multiline);
-
-        // Bold and Italic
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*(.+?)\*", "<em>$1</em>");
-
-        // Code
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"`(.+?)`", "<code>$1</code>");
-
-        // Links
-        html = System.Text.RegularExpressions.Regex.Replace(html, @"\[(.+?)\]\((.+?)\)", "<a href=\"$2\">$1</a>");
-
-        // Line breaks
-        html = html.Replace("\n", "<br/>");
-
-        return html;
+		ITextConverter convert = new MarkdownToHTML();
+		return convert.ConvertText(markdown);
     }
 }

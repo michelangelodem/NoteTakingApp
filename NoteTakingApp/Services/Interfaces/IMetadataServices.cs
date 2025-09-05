@@ -10,6 +10,7 @@ namespace NoteTakingApp.Services.Interfaces
         string? ExtractTitleFromContent(string content);
         int CountWords(string content);
         string GetFilePathFromContent(string content);
+        public (int, int) UpdateCount(string content);
         NoteMetadata SetNoteMetadata(string contents);
     }
 }

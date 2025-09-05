@@ -1,4 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
+using Microsoft.EntityFrameworkCore.Query.Internal;
 using NoteTakingApp.Configurations;
 using NoteTakingApp.Models;
 using NoteTakingApp.Services.Interfaces;
@@ -119,7 +120,31 @@ namespace NoteTakingApp.Services.Implementations
         {
             if (string.IsNullOrWhiteSpace(content)) return 0;
             var words = content.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-            return words.Length;
+            var validWords = GetValidWords(words);
+            return validWords.Length;
+        }
+
+        public int CountCharacters(string? content)
+        {
+            if (string.IsNullOrWhiteSpace(content)) return 0;
+            var words = content.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            var validWords = GetValidWords(words);
+
+            int characterCount = validWords.Sum(word => word.Length);
+
+            return characterCount;
+        }
+
+        private string[] GetValidWords(string[] words)
+        {
+            return words.Where(word => !Word.Contains(word)).ToArray();
+        }
+
+        public (int, int) UpdateCount(string content)
+        {
+            var wordCount = CountWords(content);
+            var characterCount = CountCharacters(content);
+            return (characterCount, wordCount);
         }
 
         public NoteMetadata SetNoteMetadata(string contents)
@@ -140,6 +165,30 @@ namespace NoteTakingApp.Services.Implementations
                 : _metadata.FileNameWithoutExtension;
             
             return _metadata;
+        }
+    }
+
+
+    class Word
+    {
+        public static bool Contains(string text)
+        {
+            bool result = false;
+
+            result = text.Contains('#')
+            && text.Contains('<')
+            && text.Contains('>')
+            && text.Contains('*')
+            && text.Contains('_')
+            && text.Contains('~')
+            && text.Contains('`')
+            && text.Contains('[')
+            && text.Contains(']')
+            && text.Contains('(')
+            && text.Contains(')')
+            && text.Contains('^');
+
+            return result;
         }
     }
 }

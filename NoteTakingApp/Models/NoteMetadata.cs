@@ -12,7 +12,7 @@ namespace NoteTakingApp.Models
         public bool HasH1Header { get; set; }
         public string Content { get; set; } = string.Empty;
         public int WordCount { get; set; } = 0;
-        public DateOnly CreatedDate { get; set; } = DateOnly.FromDateTime(DateTime.Now);
+        public DateOnly CreatedDate { get; set; }
         public DateOnly LastModifiedDate { get; set; } = DateOnly.FromDateTime(DateTime.Now);
 
         public void UpdateLastModifiedDate()
