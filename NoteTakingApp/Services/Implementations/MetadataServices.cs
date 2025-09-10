@@ -176,17 +176,14 @@ namespace NoteTakingApp.Services.Implementations
             bool result = false;
 
             result = text.Contains('#')
-            && text.Contains('<')
-            && text.Contains('>')
-            && text.Contains('*')
-            && text.Contains('_')
-            && text.Contains('~')
-            && text.Contains('`')
-            && text.Contains('[')
-            && text.Contains(']')
-            && text.Contains('(')
-            && text.Contains(')')
-            && text.Contains('^');
+            || text.Contains('<')
+            || text.Contains('>')
+            || text.Contains('_')
+            || text.Contains('~')
+            || text.Contains(']')
+            || text.Contains('(')
+            || text.Contains(')')
+            ||text.Contains('^');
 
             return result;
         }

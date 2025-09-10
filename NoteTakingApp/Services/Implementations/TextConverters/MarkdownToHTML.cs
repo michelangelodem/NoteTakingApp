@@ -50,8 +50,12 @@ namespace NoteTakingApp.Services.Implementations.TextConverters
 
         private static string ConvertBoldAndItalic(string input)
         {
-            ITextConverter convertMd = new MarkdownToHTML();
-            return convertMd.ConvertText(input);
+            if(string.IsNullOrEmpty(input)) return string.Empty;
+
+            var output = System.Text.RegularExpressions.Regex.Replace(input, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+            output = System.Text.RegularExpressions.Regex.Replace(output, @"\*(.+?)\*", "<em>$1</em>");
+
+            return output;
         }
 
         private static string ConvertCode(string input)
