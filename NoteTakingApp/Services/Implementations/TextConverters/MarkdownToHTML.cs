@@ -34,6 +34,10 @@ namespace NoteTakingApp.Services.Implementations.TextConverters
             // Line breaks
             html = html.Replace("\n", "<br/>");
 
+            html = ConvertList(html, true); // Unordered lists
+
+            html = ConvertList(html, false); // Ordered lists
+
             return html;
         }
 
@@ -41,16 +45,19 @@ namespace NoteTakingApp.Services.Implementations.TextConverters
         {
             if (string.IsNullOrEmpty(input)) return string.Empty;
 
-            var output = System.Text.RegularExpressions.Regex.Replace(input, @"^### (.+)$", "<h3>$1</h3>", System.Text.RegularExpressions.RegexOptions.Multiline);
-            output = System.Text.RegularExpressions.Regex.Replace(output, @"^## (.+)$", "<h2>$1</h2>", System.Text.RegularExpressions.RegexOptions.Multiline);
-            output = System.Text.RegularExpressions.Regex.Replace(output, @"^# (.+)$", "<h1>$1</h1>", System.Text.RegularExpressions.RegexOptions.Multiline);
+            var output = System.Text.RegularExpressions.Regex.Replace(input, @"^### (.+)$", "<h3>$1</h3>",
+                System.Text.RegularExpressions.RegexOptions.Multiline);
+            output = System.Text.RegularExpressions.Regex.Replace(output, @"^## (.+)$", "<h2>$1</h2>",
+                System.Text.RegularExpressions.RegexOptions.Multiline);
+            output = System.Text.RegularExpressions.Regex.Replace(output, @"^# (.+)$", "<h1>$1</h1>",
+                System.Text.RegularExpressions.RegexOptions.Multiline);
 
             return output;
         }
 
         private static string ConvertBoldAndItalic(string input)
         {
-            if(string.IsNullOrEmpty(input)) return string.Empty;
+            if (string.IsNullOrEmpty(input)) return string.Empty;
 
             var output = System.Text.RegularExpressions.Regex.Replace(input, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
             output = System.Text.RegularExpressions.Regex.Replace(output, @"\*(.+?)\*", "<em>$1</em>");
@@ -70,7 +77,44 @@ namespace NoteTakingApp.Services.Implementations.TextConverters
         {
             if (string.IsNullOrEmpty(input)) return string.Empty;
 
-            var output = System.Text.RegularExpressions.Regex.Replace(input, @"\[(.+?)\]\((.+?)\)", "<a href=\"$2\">$1</a>");
+            var output =
+                System.Text.RegularExpressions.Regex.Replace(input, @"\[(.+?)\]\((.+?)\)", "<a href=\"$2\">$1</a>");
+            return output;
+        }
+
+        private static string ConvertList(string input, bool isUL = true)
+        {
+            if (string.IsNullOrEmpty(input)) return string.Empty;
+
+            var lines = input.Split('\n');
+            var insideList = false;
+            var output = "";
+
+            foreach (var line in lines)
+            {
+                if (line.StartsWith("-"))
+                {
+                    if (!insideList)
+                    {
+                        if (isUL) output += "<ul>";
+                        else output += "<ol>";
+                        
+                        insideList = true;
+                    }
+                    output += "<li>" + line.Substring(2) + "</li>";
+                }
+                else 
+                {
+                    if (insideList)
+                    {
+                        if (isUL) output += "</ul>";
+                        else output += "</ol>";
+
+                        insideList = false;
+                    }
+                }
+            }
+
             return output;
         }
     }
