@@ -6,7 +6,7 @@ namespace NoteTakingApp.Services.Interfaces
     {
         Task<NoteMetadata> CreateNoteAsync(string? initialContent = null);
         Task<NoteMetadata> EditNoteAsync(string fileName, string content);
-        Task<Dictionary<string, NoteMetadata>> LoadNoteAsync();
+        Task<Dictionary<string, NoteMetadata>> LoadNoteAsync(string filename = null);
         Task DeleteNoteAsync(string filePath);
     }
 }

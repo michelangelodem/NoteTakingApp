@@ -212,10 +212,9 @@ else
         try
         {   
             isLoading = true;
-            NotesConfiguration note_config = new NotesConfiguration();
-            INoteRepository note_repo = new NoteRepository(note_config);
-            currentNote = await note_repo.GetNoteFileAsync(FileName);
-            if (currentNote != null)
+
+            currentNote = (await NoteService.LoadNoteAsync(FileName))[FileName];
+			if (currentNote != null)
             {
                 noteContent = currentNote.Content;
                 originalContent = currentNote.Content;
