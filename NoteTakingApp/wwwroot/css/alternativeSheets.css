@@ -1,0 +1,422 @@
+﻿/* CSS Fixes for Note Taking App - Obsidian Theme */
+
+/* CRITICAL FIXES FOR TEXT VISIBILITY */
+
+/* Fix form input text visibility */
+.form-control {
+    background-color: var(--bg-input, #161b22) !important;
+    border: 1px solid var(--border-primary, #30363d);
+    border-radius: var(--radius-md, 0.375rem);
+    color: var(--text-primary, #f0f6fc) !important;
+    padding: var(--space-md, 1rem) var(--space-lg, 1.5rem);
+    font-size: var(--text-base, 1rem);
+    font-weight: 400;
+    line-height: 1.5;
+    transition: all var(--transition-fast, 0.15s ease-in-out);
+    position: relative;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+    .form-control:focus {
+        background-color: var(--bg-input-focus, #0d1117) !important;
+        border-color: var(--accent-secondary, #1f6feb);
+        color: var(--text-primary, #f0f6fc) !important;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1), 0 0 0 3px rgba(56, 139, 253, 0.1), 0 1px 3px rgba(0, 0, 0, 0.1);
+        outline: none;
+        transform: translateY(-1px);
+    }
+
+    .form-control::placeholder {
+        color: var(--text-muted, #656d76) !important;
+        opacity: 0.8;
+        transition: opacity var(--transition-fast, 0.15s ease-in-out);
+    }
+
+/* Fix textarea text visibility */
+textarea.form-control {
+    background-color: var(--bg-input, #161b22) !important;
+    color: var(--text-primary, #f0f6fc) !important;
+    resize: vertical;
+    min-height: 120px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
+    line-height: 1.6;
+    padding: var(--space-lg, 1.5rem);
+}
+
+    textarea.form-control:focus {
+        background-color: var(--bg-input-focus, #0d1117) !important;
+        color: var(--text-primary, #f0f6fc) !important;
+        min-height: 140px;
+        transition: all var(--transition-normal, 0.3s ease-in-out), min-height var(--transition-normal, 0.3s ease-in-out);
+    }
+
+/* Fix select dropdown text visibility */
+.form-select {
+    background-color: var(--bg-input, #161b22) !important;
+    border: 1px solid var(--border-primary, #30363d);
+    border-radius: var(--radius-md, 0.375rem);
+    color: var(--text-primary, #f0f6fc) !important;
+    padding: var(--space-md, 1rem) var(--space-2xl, 3rem) var(--space-md, 1rem) var(--space-lg, 1.5rem);
+    font-size: var(--text-base, 1rem);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23f0f6fc' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right var(--space-md, 1rem) center;
+    background-size: 16px 12px;
+    transition: all var(--transition-fast, 0.15s ease-in-out);
+    cursor: pointer;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+    .form-select:focus {
+        background-color: var(--bg-input-focus, #0d1117) !important;
+        border-color: var(--accent-secondary, #1f6feb);
+        color: var(--text-primary, #f0f6fc) !important;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1), 0 0 0 3px rgba(56, 139, 253, 0.1);
+        outline: none;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2338bdf8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    }
+
+    /* Fix select option colors */
+    .form-select option {
+        background-color: var(--bg-secondary, #161b22) !important;
+        color: var(--text-primary, #f0f6fc) !important;
+        padding: var(--space-sm, 0.5rem) var(--space-md, 1rem);
+    }
+
+/* Fix form labels */
+.form-label {
+    color: var(--text-primary, #f0f6fc) !important;
+    font-weight: 500;
+    margin-bottom: var(--space-sm, 0.5rem);
+    display: block;
+}
+
+/* Fix floating labels */
+.form-floating label {
+    color: var(--text-muted, #656d76) !important;
+    transition: all var(--transition-fast, 0.15s ease-in-out);
+}
+
+.form-floating .form-control:focus ~ label,
+.form-floating .form-control:not(:placeholder-shown) ~ label {
+    color: var(--accent-secondary, #1f6feb) !important;
+    opacity: 1;
+}
+
+/* LAYOUT FIXES */
+
+/* Fix sidebar positioning */
+.sidebar {
+    background: linear-gradient(180deg, var(--bg-secondary, #161b22) 0%, var(--bg-tertiary, #21262d) 100%);
+    border-right: 1px solid var(--border-primary, #30363d);
+    transition: transform var(--transition-normal, 0.3s ease-in-out);
+    position: relative;
+    z-index: 100;
+}
+
+/* Fix top navigation bar */
+.top-row {
+    background-color: var(--bg-secondary, #161b22);
+    border-bottom: 1px solid var(--border-primary, #30363d);
+    justify-content: flex-end;
+    height: 3.5rem;
+    display: flex;
+    align-items: center;
+    backdrop-filter: blur(8px);
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    padding: 0 var(--space-lg, 1.5rem);
+}
+
+    .top-row a,
+    .top-row .btn-link {
+        white-space: nowrap;
+        margin-left: var(--space-lg, 1.5rem);
+        text-decoration: none;
+        color: var(--text-secondary, #8b949e) !important;
+        transition: color var(--transition-fast, 0.15s ease-in-out);
+        font-weight: 500;
+    }
+
+        .top-row a:hover,
+        .top-row .btn-link:hover {
+            color: var(--text-primary, #f0f6fc) !important;
+            text-decoration: underline;
+        }
+
+/* Fix main content container */
+main {
+    flex: 1;
+    background-color: var(--bg-primary, #0d1117);
+    min-height: calc(100vh - 3.5rem);
+    padding: var(--space-lg, 1.5rem);
+}
+
+/* Fix page layout */
+.page {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: var(--bg-primary, #0d1117);
+}
+
+/* Responsive fixes */
+@media (max-width: 640.98px) {
+    .top-row {
+        justify-content: space-between;
+        padding: 0 var(--space-md, 1rem);
+        height: 3.5rem;
+    }
+
+        .top-row a,
+        .top-row .btn-link {
+            margin-left: 0;
+            margin-right: var(--space-sm, 0.5rem);
+        }
+
+    .sidebar {
+        transform: translateX(-100%);
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 280px;
+        height: 100vh;
+        z-index: 1000;
+        box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.5));
+    }
+
+        .sidebar.show {
+            transform: translateX(0);
+        }
+
+    main {
+        padding: var(--space-md, 1rem);
+        margin-top: 0;
+    }
+}
+
+@media (min-width: 641px) {
+    .page {
+        flex-direction: row;
+    }
+
+    .sidebar {
+        width: 280px;
+        height: 100vh;
+        position: sticky;
+        top: 0;
+        flex-shrink: 0;
+        overflow-y: auto;
+    }
+
+    .top-row {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+
+        .top-row.auth a:first-child {
+            flex: 1;
+            text-align: right;
+            width: 0;
+        }
+
+    main {
+        padding: var(--space-xl, 2rem);
+        margin-left: 0;
+    }
+}
+
+/* Fix card text visibility */
+.card-title {
+    color: var(--text-primary, #f0f6fc) !important;
+    font-weight: 700;
+    font-size: var(--text-lg, 1.125rem);
+    margin-bottom: var(--space-md, 1rem);
+    transition: color var(--transition-fast, 0.15s ease-in-out);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm, 0.5rem);
+}
+
+.card-text {
+    color: var(--text-secondary, #8b949e) !important;
+    margin-bottom: var(--space-lg, 1.5rem);
+    line-height: 1.6;
+}
+
+/* Fix preview content text */
+.preview-content {
+    background-color: var(--bg-secondary, #161b22);
+    border: 1px solid var(--border-primary, #30363d);
+    border-radius: var(--radius-md, 0.375rem);
+    padding: var(--space-lg, 1.5rem);
+    min-height: 400px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    line-height: 1.6;
+    color: var(--text-primary, #f0f6fc) !important;
+}
+
+    .preview-content h1,
+    .preview-content h2,
+    .preview-content h3,
+    .preview-content h4,
+    .preview-content h5,
+    .preview-content h6 {
+        color: var(--text-primary, #f0f6fc) !important;
+    }
+
+    .preview-content p {
+        color: var(--text-secondary, #8b949e) !important;
+    }
+
+/* Fix button text visibility */
+.btn {
+    color: inherit !important;
+    font-weight: 600;
+}
+
+.btn-primary {
+    color: white !important;
+}
+
+.btn-secondary {
+    color: white !important;
+}
+
+.btn-outline-secondary {
+    color: var(--text-secondary, #8b949e) !important;
+}
+
+    .btn-outline-secondary:hover {
+        color: var(--text-primary, #f0f6fc) !important;
+    }
+
+.btn-outline-danger {
+    color: var(--accent-danger, #da3633) !important;
+}
+
+    .btn-outline-danger:hover {
+        color: white !important;
+    }
+
+.btn-danger {
+    color: white !important;
+}
+
+/* Fix input group text visibility */
+.input-group-text {
+    background: linear-gradient(135deg, var(--bg-tertiary, #21262d) 0%, var(--bg-card, #1c2128) 100%);
+    border: 1px solid var(--border-primary, #30363d);
+    border-right: none;
+    color: var(--text-secondary, #8b949e) !important;
+    padding: var(--space-md, 1rem) var(--space-lg, 1.5rem);
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+    transition: all var(--transition-fast, 0.15s ease-in-out);
+}
+
+.input-group:focus-within .input-group-text {
+    background: linear-gradient(135deg, var(--bg-card, #1c2128) 0%, var(--bg-card-hover, #262c36) 100%);
+    color: var(--accent-secondary, #1f6feb) !important;
+    border-color: var(--accent-secondary, #1f6feb);
+}
+
+/* Fix checkbox and radio visibility */
+.form-check-label {
+    color: var(--text-primary, #f0f6fc) !important;
+    cursor: pointer;
+    margin-left: var(--space-sm, 0.5rem);
+    transition: color var(--transition-fast, 0.15s ease-in-out);
+}
+
+.form-check:hover .form-check-label {
+    color: var(--accent-secondary, #1f6feb) !important;
+}
+
+/* Fix alert text visibility */
+.alert {
+    color: inherit !important;
+    font-weight: 500;
+}
+
+.alert-success {
+    color: var(--accent-primary, #238636) !important;
+}
+
+.alert-danger {
+    color: var(--accent-danger, #da3633) !important;
+}
+
+.alert-warning {
+    color: var(--accent-warning, #d29922) !important;
+}
+
+/* Mobile-specific text improvements */
+@media (max-width: 768px) {
+    .form-control {
+        font-size: 16px !important; /* Prevent zoom on iOS */
+        color: var(--text-primary, #f0f6fc) !important;
+    }
+
+    .form-select {
+        font-size: 16px !important;
+        color: var(--text-primary, #f0f6fc) !important;
+    }
+
+    .btn {
+        color: inherit !important;
+        min-height: 44px;
+    }
+}
+
+/* High contrast mode improvements */
+@media (prefers-contrast: high) {
+    .form-control,
+    .form-select,
+    textarea.form-control {
+        background-color: #000000 !important;
+        color: #ffffff !important;
+        border-color: #ffffff !important;
+        border-width: 2px;
+    }
+
+        .form-control::placeholder {
+            color: #cccccc !important;
+        }
+
+    .card-title,
+    .card-text,
+    .preview-content,
+    .form-label {
+        color: #ffffff !important;
+    }
+}
+
+/* Force color inheritance for better visibility */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="url"],
+input[type="tel"],
+input[type="number"],
+input[type="datetime-local"],
+input[type="date"],
+input[type="time"] {
+    color: var(--text-primary, #f0f6fc) !important;
+    background-color: var(--bg-input, #161b22) !important;
+}
+
+/* Fix any remaining text color issues */
+* {
+    color: inherit;
+}
+
+body, html {
+    color: var(--text-primary, #f0f6fc) !important;
+    background-color: var(--bg-primary, #0d1117) !important;
+}

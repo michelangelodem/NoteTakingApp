@@ -61,6 +61,7 @@ namespace NoteTakingApp.Services.Implementations.TextConverters
         private static string ConvertCode(string input)
         {
             if (string.IsNullOrEmpty(input)) return string.Empty;
+
             var output = System.Text.RegularExpressions.Regex.Replace(input, @"`(.+?)`", "<code>$1</code>");
             return output;
         }
@@ -68,6 +69,7 @@ namespace NoteTakingApp.Services.Implementations.TextConverters
         private static string ConvertLinks(string input)
         {
             if (string.IsNullOrEmpty(input)) return string.Empty;
+
             var output = System.Text.RegularExpressions.Regex.Replace(input, @"\[(.+?)\]\((.+?)\)", "<a href=\"$2\">$1</a>");
             return output;
         }

@@ -50,7 +50,7 @@
             <div class="col-12">
                 <div class="d-flex align-items-center gap-3">
                     <span class="text-muted">Sort by:</span>
-                    <select class="form-select" style="width: auto;" @onchange="SortNotes">
+                    <select class="form-select" style="width: auto;" @bind="sortOption">
                         <option value="modified">Last Modified</option>
                         <option value="created">Date Created</option>
                         <option value="title">Title</option>
@@ -93,7 +93,7 @@
                                 </small>
                                 <br/>
                                 <small class="text-muted">
-                                    <i class="bi bi-calendar-plus"></i> Created: @note.CreatedDate.ToString("MMM dd, yyyy")
+                                    <i class="bi bi-calendar-plus"></i> Created: @note.CreatedDate
                                 </small>
                                 <br/>
                                 <small class="text-muted">
@@ -148,7 +148,22 @@
     private List<NoteMetadata> filteredNotes = new();
     private bool isLoading = true;
     private string searchTerm = string.Empty;
-    private string sortOption = "modified";
+
+    private string sortOptionBacking = "modified";
+
+    private string sortOption
+    {
+        get => sortOptionBacking;
+        set
+        {
+            if (sortOptionBacking != value)
+            {
+                sortOptionBacking = value;
+                SortNotes();
+            }
+        }
+	}
+
     private bool sortAscending = false;
 
     protected override async Task OnInitializedAsync()
