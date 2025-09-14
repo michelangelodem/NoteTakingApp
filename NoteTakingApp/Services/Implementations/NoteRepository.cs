@@ -2,6 +2,7 @@
 using NoteTakingApp.Configurations;
 using NoteTakingApp.Models;
 using NoteTakingApp.Services.Interfaces;
+using NuGet.ProjectModel;
 
 namespace NoteTakingApp.Services.Implementations
 {
@@ -20,7 +21,24 @@ namespace NoteTakingApp.Services.Implementations
         {
             var n_metadata = new NoteMetadata();
             var filePath = Path.Combine(_notesConfiguration.NotesDirectory, fileName);
-            var content = await File.ReadAllTextAsync(filePath);
+            string content;
+            try
+            {
+                content = await File.ReadAllTextAsync(filePath);
+            }
+            catch (FileNotFoundException e)
+            {
+                throw new FileNotFoundException($"The file {fileName} does not exist: {e.Message}", e);
+            }
+            catch (FileLoadException e)
+            {
+                throw new FileLoadException($"The file {fileName} could not be loaded: {e.Message}", e);
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"An error occurred while reading the file {fileName}: {e.Message}", e);
+            }
+
             n_metadata = _noteParser.Parse(content);
             
             return n_metadata;
@@ -36,7 +54,18 @@ namespace NoteTakingApp.Services.Implementations
             {
                 var content = await File.ReadAllTextAsync(file);
                 var metadata = _noteParser.Parse(content);
-                notes.Add(metadata);
+                try
+                {
+                    notes.Add(metadata);
+                }
+                catch (EndOfStreamException e)
+                {
+                    throw new EndOfStreamException($"Error parsing file {file}: {e.Message}");
+                }
+                catch (FileFormatException e)
+                {
+                    throw new FileFormatException($"Error parsing file {file}: {e.Message}");
+                }
             }
 
             return notes.AsEnumerable();
@@ -46,13 +75,34 @@ namespace NoteTakingApp.Services.Implementations
         {
             string dir = _notesConfiguration.NotesDirectory;
 
-            await Task.Run(async () =>
-            {   
-                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            try
+            {
+                await Task.Run(async () =>
+                {
+                    if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
 
-                string pathToDir = Path.Combine(dir, note.FileName);
-                await File.WriteAllTextAsync(pathToDir, note.Content);
-            });
+                    string pathToDir = Path.Combine(dir, note.FileName);
+
+                    await File.WriteAllTextAsync(pathToDir, note.Content);
+
+                });
+            }
+            catch (DirectoryNotFoundException ex)
+            {
+                throw new DirectoryNotFoundException($"The directory {dir} was not found.", ex);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                throw new UnauthorizedAccessException($"You do not have permission to access the directory {dir}.", ex);
+            }
+            catch (PathTooLongException ex)
+            {
+                throw new PathTooLongException($"The path {dir} is too long.", ex);
+            }
+            catch (IOException ex)
+            {
+                throw new IOException($"An I/O error occurred while accessing the directory {dir}.", ex);
+            }
         }
 
         public async Task DeleteNoteFileAsync(string fileName)
@@ -60,13 +110,13 @@ namespace NoteTakingApp.Services.Implementations
             var filePath = Path.Combine(_notesConfiguration.NotesDirectory, fileName);
             await Task.Run(() =>
             {
-                if (File.Exists(filePath))
+                try
                 {
                     File.Delete(filePath);
                 } 
-                else
+                catch (FileNotFoundException e)
                 {
-                    throw new FileNotFoundException($"The file {fileName} does not exist.");
+                    throw new FileNotFoundException($"The file {fileName} does not exist: {e.Message}", e);
                 }
             });
         }
@@ -76,13 +126,13 @@ namespace NoteTakingApp.Services.Implementations
             var filePath = Path.Combine(_notesConfiguration.NotesDirectory, fileName);
             await Task.Run(() =>
             {
-                if (File.Exists(filePath))
+                try
                 {
                     File.WriteAllText(filePath, content);
                 }
-                else
+                catch (FileNotFoundException e)
                 {
-                    throw new FileNotFoundException($"The file {fileName} does not exist.");
+                    throw new FileNotFoundException($"The file {fileName} does not exist: {e.Message}", e);
                 }
             });
         }
