@@ -25,6 +25,7 @@ namespace NoteTakingApp.Services.Implementations
             try
             {
                 content = await File.ReadAllTextAsync(filePath);
+                n_metadata = _noteParser.Parse(content);
             }
             catch (FileNotFoundException e)
             {
@@ -34,13 +35,15 @@ namespace NoteTakingApp.Services.Implementations
             {
                 throw new FileLoadException($"The file {fileName} could not be loaded: {e.Message}", e);
             }
+            catch (ParsingNoteException e)
+            {
+                throw new ParsingNoteException($"Error parsing note metadata for file {fileName}: {e.Message}", e);
+            }
             catch (Exception e)
             {
                 throw new Exception($"An error occurred while reading the file {fileName}: {e.Message}", e);
-            }
+            } 
 
-            n_metadata = _noteParser.Parse(content);
-            
             return n_metadata;
         }
 
@@ -53,9 +56,11 @@ namespace NoteTakingApp.Services.Implementations
             foreach (var file in files)
             {
                 var content = await File.ReadAllTextAsync(file);
-                var metadata = _noteParser.Parse(content);
+                var metadata = new NoteMetadata();
+
                 try
                 {
+                    metadata = _noteParser.Parse(content);
                     notes.Add(metadata);
                 }
                 catch (EndOfStreamException e)
@@ -65,6 +70,10 @@ namespace NoteTakingApp.Services.Implementations
                 catch (FileFormatException e)
                 {
                     throw new FileFormatException($"Error parsing file {file}: {e.Message}");
+                }
+                catch (ParsingNoteException e)
+                {
+                    throw new ParsingNoteException($"Error parsing file {file}: {e.Message}");
                 }
             }
 

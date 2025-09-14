@@ -78,7 +78,7 @@ namespace NoteTakingApp.Services.Implementations
             {
                 return $"# {displayTitle} \n\n";
             }
-            else if (!initialContent.TrimStart().StartsWith("# "))
+            if (!initialContent.TrimStart().StartsWith("# "))
             {
                 return $"# {displayTitle} \n\n{initialContent}";
             }
@@ -88,21 +88,18 @@ namespace NoteTakingApp.Services.Implementations
         public string? ExtractTitleFromContent(string content)
         {
             if (string.IsNullOrEmpty(content)) return null;
-            else
+            
+            var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var line in lines)
             {
-                var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                foreach (var line in lines)
+                string trimmedLine = line.Trim();
+
+                if (trimmedLine.Length == 0) continue;
+
+                if (trimmedLine.StartsWith("# ") && trimmedLine.Length > 2)
                 {
-                    string trimmedLine = line.Trim();
-
-                    if (trimmedLine.Length == 0) continue;
-
-                    if (trimmedLine.StartsWith("# ") && trimmedLine.Length > 2)
-                    {
-                        Console.WriteLine($"Parsing H1 Header: {trimmedLine}");
-                        return trimmedLine.Substring(2).Trim(); // Remove the "# " prefix
-                    }
-                    else break;
+                    //Debugging: Console.WriteLine($"Parsing H1 Header: {trimmedLine}");
+                    return trimmedLine.Substring(2).Trim(); // Remove the "# " prefix
                 }
             }
             return null;
@@ -153,17 +150,36 @@ namespace NoteTakingApp.Services.Implementations
 
             string tempPath = GetFilePathFromContent(contents);
             var filePath = EnsureUniqueFilePath(tempPath);
-            _metadata.FileName = Path.GetFileName(filePath) + ".md";
-            _metadata.FileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
-            _metadata.WordCount = CountWords(contents);
-            _metadata.Content = contents;
+            try
+            {
+                _metadata.FileName = Path.GetFileName(filePath) + ".md";
+                _metadata.FileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
+                _metadata.WordCount = CountWords(contents);
+                _metadata.Content = contents;
 
-            var h1Header = ExtractTitleFromContent(contents);
-            _metadata.HasH1Header = !(string.IsNullOrEmpty(h1Header));
-            _metadata.DisplayTitle = _metadata.HasH1Header
-                ? h1Header
-                : _metadata.FileNameWithoutExtension;
-            
+                var h1Header = ExtractTitleFromContent(contents);
+                _metadata.HasH1Header = !(string.IsNullOrEmpty(h1Header));
+                _metadata.DisplayTitle = _metadata.HasH1Header
+                    ? h1Header
+                    : _metadata.FileNameWithoutExtension;
+            }
+            catch (PathTooLongException e)
+            {
+                throw new PathTooLongException("The generated file path is too long.", e);
+            }
+            catch (UnauthorizedAccessException e)
+            {
+                throw new UnauthorizedAccessException("Access to the file path is denied.", e);
+            }
+            catch (IOException e)
+            {
+                throw new IOException("Error accessing the file path.", e);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error setting note metadata", ex);
+            }
+
             return _metadata;
         }
     }

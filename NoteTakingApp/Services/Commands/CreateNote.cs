@@ -21,7 +21,16 @@ namespace NoteTakingApp.Services.Commands
 
         public NoteMetadata CreateNoteCommand(string? initialContent = null)
         {
-            var metadata = _parser.Parse(initialContent);
+            var metadata = new NoteMetadata();
+            try
+            {
+                metadata = _parser.Parse(initialContent);
+            } 
+            catch (ParsingNoteException ex)
+            {
+                throw new ParsingNoteException("Error creating note metadata", ex);
+            }
+
             if (metadata == null)
             {
                 throw new ArgumentNullException(nameof(metadata), "Metadata cannot be null");

@@ -13,11 +13,27 @@ namespace NoteTakingApp.Services.Implementations
         public NoteMetadata Parse(string contents)
         {       
 
-            var metadata = metadata_service.SetNoteMetadata(contents);
+            var metadata = new NoteMetadata();
+            try
+            {
+                metadata = metadata_service.SetNoteMetadata(contents);
+                metadata.UpdateLastModifiedDate();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error parsing note metadata on the parser layer", ex);
+            }
 
-            metadata.UpdateLastModifiedDate();
             return metadata;
-
         }
+    }
+
+    public class ParsingNoteException : Exception
+    {
+        public ParsingNoteException() { }
+        public ParsingNoteException(string message) 
+            : base(message) { }
+        public ParsingNoteException(string message, Exception inner) 
+            : base(message, inner) { }
     }
 }

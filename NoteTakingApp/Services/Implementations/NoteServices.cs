@@ -38,15 +38,23 @@ namespace NoteTakingApp.Services.Implementations
         public async Task<NoteMetadata> EditNoteAsync(string fileName, string content)
         {      
             var updateNote = new UpdateNote(new NotesConfiguration());
+            var newNote = new NoteMetadata();
+            try
+            {
+                var oldNote = await _noteRepository.GetNoteFileAsync(fileName);
+                Console.WriteLine($"{oldNote.Content}");
 
-            var oldNote = await _noteRepository.GetNoteFileAsync(fileName);
-            Console.WriteLine($"{oldNote.Content}");
+                newNote = await updateNote.UpdateNoteAsync(oldNote, content);
+                Console.WriteLine($"{newNote.Content}");
 
-            var newNote = await updateNote.UpdateNoteAsync(oldNote, content);
-            Console.WriteLine($"{newNote.Content}");
-            
-            await _noteRepository.DeleteNoteFileAsync(oldNote.FileName); 
-            await _noteRepository.AddNoteFileAsync(newNote);
+                await _noteRepository.DeleteNoteFileAsync(oldNote.FileName);
+                await _noteRepository.AddNoteFileAsync(newNote);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error updating note", ex);
+            }
+
             _noteCache[newNote.FileNameWithoutExtension] = newNote;
 
             return newNote;
@@ -54,8 +62,16 @@ namespace NoteTakingApp.Services.Implementations
 
         public async Task<Dictionary<string, NoteMetadata>> LoadNoteAsync(string? filename = null)
         {
-            
-            var notes = await _noteRepository.GetAllNoteFilesAsync(); 
+            IEnumerable<NoteMetadata> notes;
+
+            try {
+                notes = await _noteRepository.GetAllNoteFilesAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error loading notes from repository", ex);
+            }
+
             _noteCache = notes.ToDictionary(
                     n => n.FileNameWithoutExtension,
                     n => n);
