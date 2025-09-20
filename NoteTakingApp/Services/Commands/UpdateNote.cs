@@ -7,12 +7,12 @@ namespace NoteTakingApp.Services.Commands{
     public class UpdateNote 
     {
         private readonly NotesConfiguration _notesConfiguration; 
-        private NoteParser _noteParser;
+        private NoteMetadataParser _noteParser;
         
         public UpdateNote(NotesConfiguration notesConfiguration) 
         {
             _notesConfiguration = notesConfiguration;
-            _noteParser = new NoteParser();
+            _noteParser = new NoteMetadataParser();
         }
 
         public async Task<NoteMetadata?> UpdateNoteAsync(NoteMetadata oldNote, string newContent)
@@ -39,7 +39,6 @@ namespace NoteTakingApp.Services.Commands{
             {
                 oldNote.Content = newNote.Content;
                 oldNote.WordCount = newNote.WordCount;
-                oldNote.UpdateLastModifiedDate();
             }
 
             return oldNote;

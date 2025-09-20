@@ -361,3 +361,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Migration to the DataBase project system
+*.Database.vs.xml
+Migrations/*

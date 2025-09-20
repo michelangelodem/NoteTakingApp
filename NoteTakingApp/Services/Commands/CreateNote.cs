@@ -16,7 +16,7 @@ namespace NoteTakingApp.Services.Commands
         {
             _notesConfiguration = notesConfiguration;
             service = new MetadataServices();
-            _parser = new NoteParser();
+            _parser = new NoteMetadataParser();
         }
 
         public NoteMetadata CreateNoteCommand(string? initialContent = null)

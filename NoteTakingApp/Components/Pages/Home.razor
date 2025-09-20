@@ -8,93 +8,94 @@
 <PageTitle>Home - NoteTaking App</PageTitle>
 
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="jumbotron bg-light p-4 rounded mb-4">
-                <h1 class="display-4">
-                    <i class="bi bi-journal-bookmarks text-primary"></i>
-                    Welcome to NoteTaking App
-                </h1>
-                <p class="lead">Organize your thoughts, ideas, and notes in one place.</p>
-                <hr class="my-4">
-                <p>Start creating and managing your markdown notes with ease.</p>
-                <div class="d-flex gap-3">
-                    <a class="btn btn-primary btn-lg" href="css/Typography.css" role="button">
-                        <i class="bi bi-plus-circle"></i> Create New Note
-                    </a>
-                    <a class="btn btn-outline-secondary btn-lg" href="notes" role="button">
-                        <i class="bi bi-list"></i> View All Notes
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
+	<div class="row">
+		<div class="col-12">
+			<div class="jumbotron bg-light p-4 rounded mb-4">
+				<h1 class="display-4">
+					<i class="bi bi-journal-bookmarks text-primary"></i>
+					Welcome to NoteTaking App
+				</h1>
+				<p class="lead">Organize your thoughts, ideas, and notes in one place.</p>
+				<hr class="my-4">
+				<p>Start creating and managing your markdown notes with ease.</p>
+				<div class="d-flex gap-3">
+					<a class="btn btn-primary btn-lg" href="css/Typography.css" role="button">
+						<i class="bi bi-plus-circle"></i> Create New Note
+					</a>
+					<a class="btn btn-outline-secondary btn-lg" href="notes" role="button">
+						<i class="bi bi-list"></i> View All Notes
+					</a>
+				</div>
+			</div>
+		</div>
+	</div>
 
-    @if (recentNotes != null && recentNotes.Any())
-    {
-        <div class="row">
-            <div class="col-12">
-                <h2>Recent Notes</h2>
-                <div class="row">
-                    @foreach (var note in recentNotes.Take(6))
-                    {
-                        <div class="col-md-6 col-lg-4 mb-3">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <h5 class="card-title">
-                                        @if (note.HasH1Header)
-                                        {
-                                            <i class="bi bi-hash text-primary"></i>
-                                        }
-                                        else
-                                        {
-                                            <i class="bi bi-file-text text-secondary"></i>
-                                        }
-                                        @Regex.Replace(note.DisplayTitle, @"^\s*#+\s*", "");
-                                    </h5>
-                                    <p class="card-text text-muted">
-                                        <small>
-                                            <i class="bi bi-calendar"></i> @note.LastModifiedDate.ToString("MMM dd, yyyy")
-                                            <span class="ms-3">
-                                                <i class="bi bi-body-text"></i> @note.WordCount words
-                                            </span>
-                                        </small>
-                                    </p>
-                                    <div class="d-flex gap-2">
-                                        <a href="@($"note/edit/{note.FileName}")" class="btn btn-sm btn-primary">
-                                            <i class="bi bi-pencil"></i> Edit
-                                        </a>
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteNote(note.FileName)">
-                                            <i class="bi bi-trash"></i> Delete
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    }
+	@if (recentNotes != null && recentNotes.Any())
+	{
+		<div class="row">
+			<div class="col-12">
+				<h2>Recent Notes</h2>
+				<div class="row">
+					@foreach (var note in recentNotes.Take(6))
+					{
+						<div class="col-md-6 col-lg-4 mb-3">
+							<div class="card h-100">
+								<div class="card-body">
+									<h5 class="card-title">
+										@if (note.HasH1Header)
+										{
+											<i class="bi bi-hash text-primary"></i>
+										}
+										else
+										{
+											<i class="bi bi-file-text text-secondary"></i>
+										}
+										@Regex.Replace(note.DisplayTitle, @"^\s*#+\s*", "");
+									</h5>
+									<p class="card-text text-muted">
+										<small>
+											<i class="bi bi-calendar"></i> 
+											<span class="ms-3">
+												<i class="bi bi-body-text"></i> @note.WordCount words
+											</span>
+										</small>
+									</p>
+									<div class="d-flex gap-2">
+										<a href="@($"note/edit/{note.FileName}")" class="btn btn-sm btn-primary">
+											<i class="bi bi-pencil"></i> Edit
+										</a>
+										<button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteNote(note.FileName)">
+											<i class="bi bi-trash"></i> Delete
+										</button>
+									</div>
+								</div>
+							</div>
+						</div>
+					}
+				</div>
+			</div>
+		</div>
+	}
 </div>
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+	<div class="alert alert-danger" role="alert">
+		@errorMessage
+	</div>
+}
 
 @code {
     private List<NoteMetadata>? recentNotes;
+	private string errorMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        try
-        {
-            var notesDict = await NoteService.LoadNoteAsync();
-            recentNotes = notesDict.Values
-                .OrderByDescending(n => n.LastModifiedDate)
+
+	    var notesDict = await NoteService.LoadNoteAsync();
+	    recentNotes = notesDict.Values
+                .OrderByDescending(n => n.DisplayTitle)
                 .ToList();
-        }
-        catch (Exception ex)
-        {
-            // Handle error - could show a toast or error message
-            Console.WriteLine($"Error loading notes: {ex.Message}");
-        }
+        
     }
 
     private async Task DeleteNote(string fileName)
@@ -105,13 +106,27 @@
             // Reload notes after deletion
             var notesDict = await NoteService.LoadNoteAsync();
             recentNotes = notesDict.Values
-                .OrderByDescending(n => n.LastModifiedDate)
+                .OrderByDescending(n => n.DisplayTitle)
                 .ToList();
             StateHasChanged();
         }
-        catch (Exception ex)
+		catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
         {
-            Console.WriteLine($"Error deleting note: {ex.Message}");
+            ShowError($"Error deleting note: {ex.Message}, you have no current access to this note.");
         }
+    }
+
+    private void ShowError(string msg)
+    {
+	    errorMessage = msg;
+	    
+	    StateHasChanged();
+
+	    // Clear message after 3 seconds
+	    _ = Task.Delay(3000).ContinueWith(_ =>
+	    {
+		    errorMessage = string.Empty;
+		    InvokeAsync(StateHasChanged);
+	    });
     }
 }

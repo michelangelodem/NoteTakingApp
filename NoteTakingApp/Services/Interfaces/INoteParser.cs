@@ -4,6 +4,6 @@ namespace NoteTakingApp.Services.Interfaces
 {
     public interface INoteParser
     {
-        public NoteMetadata Parse(string content);
+        public object Parse(string content);
     }
 }

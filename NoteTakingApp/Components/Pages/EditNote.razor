@@ -58,13 +58,13 @@ else if (currentNote != null)
                             <div class="col-md-3">
                                 <small class="text-muted">
                                     <i class="bi bi-calendar-plus"></i>
-                                    <strong>Created:</strong> @currentNote.CreatedDate.ToString("MMM dd, yyyy")
+                                    <strong>Created:</strong>
                                 </small>
                             </div>
                             <div class="col-md-3">
                                 <small class="text-muted">
                                     <i class="bi bi-calendar"></i>
-                                    <strong>Modified:</strong> @currentNote.LastModifiedDate.ToString("MMM dd, yyyy")
+                                    <strong>Modified:</strong>
                                 </small>
                             </div>
                             <div class="col-md-3">
@@ -221,7 +221,7 @@ else
                 UpdateCounts();
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException)
         {
             ShowMessage($"Error loading note: {ex.Message}", true);
         }
@@ -268,9 +268,9 @@ else
             hasUnsavedChanges = false;
             ShowMessage("Note saved successfully!", false);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is ParsingNoteException || ex is IOException)
         {
-            ShowMessage($"Error saving note: {ex.Message}", true);
+            ShowMessage($"Error saving note: {ex.Message}. Please enter valid content. If error persists then it's us UwU.", true);
         }
         finally
         {

@@ -163,9 +163,9 @@
             // Navigate to the edit page of the newly created note
             Navigation.NavigateTo($"/note/edit/{createdNote.FileName}");
         }
-        catch (Exception ex)
+		catch (Exception ex) when (ex is IOException || ex is ParsingNoteException)
         {
-            errorMessage = $"Error creating note: {ex.Message}";
+            errorMessage = $"Error creating note: {ex.Message}, please try again with valid content.";
         }
         finally
         {

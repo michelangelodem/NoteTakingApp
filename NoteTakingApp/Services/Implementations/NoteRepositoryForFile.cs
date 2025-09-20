@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+﻿using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using NoteTakingApp.Configurations;
 using NoteTakingApp.Models;
 using NoteTakingApp.Services.Interfaces;
@@ -6,48 +6,41 @@ using NuGet.ProjectModel;
 
 namespace NoteTakingApp.Services.Implementations
 {
-    public class NoteRepository : INoteRepository
+    public class NoteRepositoryForFile : INoteRepository
     {
         private NotesConfiguration _notesConfiguration;
         private INoteParser _noteParser;
-        
-        public NoteRepository(NotesConfiguration notesConfiguration)
+        private ILogger<NoteRepositoryForFile> _logger;
+
+        public NoteRepositoryForFile(NotesConfiguration notesConfiguration, ILogger<NoteRepositoryForFile> logger)
         {
             _notesConfiguration = notesConfiguration;
-            _noteParser = new NoteParser();
+            _noteParser = new NoteMetadataParser();
+            _logger = logger;
         }
 
-        public async Task<NoteMetadata> GetNoteFileAsync(string fileName)
+        public async Task<NoteMetadata> GetNoteAsync(string fileName)
         {
-            var n_metadata = new NoteMetadata();
             var filePath = Path.Combine(_notesConfiguration.NotesDirectory, fileName);
-            string content;
+
             try
             {
-                content = await File.ReadAllTextAsync(filePath);
-                n_metadata = _noteParser.Parse(content);
+                var content = await File.ReadAllTextAsync(filePath);
+                return _noteParser.Parse(content);
             }
-            catch (FileNotFoundException e)
+            catch (FileNotFoundException ex)
             {
-                throw new FileNotFoundException($"The file {fileName} does not exist: {e.Message}", e);
+                _logger.LogError(ex, "File not found: {FileName} in {Directory}", fileName, _notesConfiguration.NotesDirectory);
+                throw new FileNotFoundException($"Note file '{fileName}' not found in '{_notesConfiguration.NotesDirectory}'.", ex);
             }
-            catch (FileLoadException e)
+            catch (Exception ex) when (ex is FileLoadException || ex is ParsingNoteException)
             {
-                throw new FileLoadException($"The file {fileName} could not be loaded: {e.Message}", e);
+                _logger.LogError(ex, "Failed to load or parse note file: {FileName}", fileName);
+                throw new Exception($"Failed to load or parse note file '{fileName}': {ex.Message}", ex);
             }
-            catch (ParsingNoteException e)
-            {
-                throw new ParsingNoteException($"Error parsing note metadata for file {fileName}: {e.Message}", e);
-            }
-            catch (Exception e)
-            {
-                throw new Exception($"An error occurred while reading the file {fileName}: {e.Message}", e);
-            } 
-
-            return n_metadata;
         }
 
-        public async Task<IEnumerable<NoteMetadata>> GetAllNoteFilesAsync()
+        public async Task<IEnumerable<NoteMetadata>> GetAllNoteAsync()
         {
             var filepath = _notesConfiguration.NotesDirectory;
             var notes = new List<NoteMetadata>();
@@ -63,24 +56,17 @@ namespace NoteTakingApp.Services.Implementations
                     metadata = _noteParser.Parse(content);
                     notes.Add(metadata);
                 }
-                catch (EndOfStreamException e)
+                catch (ParsingNoteException ex)
                 {
-                    throw new EndOfStreamException($"Error parsing file {file}: {e.Message}");
-                }
-                catch (FileFormatException e)
-                {
-                    throw new FileFormatException($"Error parsing file {file}: {e.Message}");
-                }
-                catch (ParsingNoteException e)
-                {
-                    throw new ParsingNoteException($"Error parsing file {file}: {e.Message}");
+                    _logger.LogError(ex, "Error parsing note from file {FileName}", file);
+                    throw new ParsingNoteException($"Error parsing note from file {file}: {ex.Message}", ex);
                 }
             }
 
             return notes.AsEnumerable();
         }
 
-        public async Task AddNoteFileAsync(NoteMetadata note)
+        public async Task AddNoteAsync(NoteMetadata note)
         {
             string dir = _notesConfiguration.NotesDirectory;
 
@@ -97,26 +83,21 @@ namespace NoteTakingApp.Services.Implementations
                 });
             }
             catch (DirectoryNotFoundException ex)
-            {
+            {   
+                _logger.LogError(ex, "Directory not found: {Directory}", dir);
                 throw new DirectoryNotFoundException($"The directory {dir} was not found.", ex);
             }
-            catch (UnauthorizedAccessException ex)
-            {
-                throw new UnauthorizedAccessException($"You do not have permission to access the directory {dir}.", ex);
-            }
-            catch (PathTooLongException ex)
-            {
-                throw new PathTooLongException($"The path {dir} is too long.", ex);
-            }
-            catch (IOException ex)
-            {
-                throw new IOException($"An I/O error occurred while accessing the directory {dir}.", ex);
+            catch(Exception ex) when (ex is UnauthorizedAccessException || ex is IOException)
+            {   
+                _logger.LogError(ex, "Failed to add note file: {FileName}", note.FileName);
+                throw new Exception($"Failed to add note file '{note.FileName} to Directory {dir}': {ex.Message}", ex);
             }
         }
 
-        public async Task DeleteNoteFileAsync(string fileName)
+        public async Task DeleteNoteAsync(string fileName)
         {
             var filePath = Path.Combine(_notesConfiguration.NotesDirectory, fileName);
+
             await Task.Run(() =>
             {
                 try
@@ -125,6 +106,7 @@ namespace NoteTakingApp.Services.Implementations
                 } 
                 catch (FileNotFoundException e)
                 {
+                    _logger.LogError(e, "File not found: {FileName}", fileName);
                     throw new FileNotFoundException($"The file {fileName} does not exist: {e.Message}", e);
                 }
             });
@@ -141,6 +123,7 @@ namespace NoteTakingApp.Services.Implementations
                 }
                 catch (FileNotFoundException e)
                 {
+                    _logger.LogError(e, "File not found: {FileName}", fileName);
                     throw new FileNotFoundException($"The file {fileName} does not exist: {e.Message}", e);
                 }
             });

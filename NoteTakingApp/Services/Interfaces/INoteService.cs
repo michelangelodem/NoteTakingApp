@@ -1,12 +1,13 @@
-﻿using NoteTakingApp.Models;
+﻿using System.Collections;
+using NoteTakingApp.Models;
 
 namespace NoteTakingApp.Services.Interfaces
 {
     public interface INoteService
     {
-        Task<NoteMetadata> CreateNoteAsync(string? initialContent = null);
-        Task<NoteMetadata> EditNoteAsync(string fileName, string content);
-        Task<Dictionary<string, NoteMetadata>> LoadNoteAsync(string filename = null);
-        Task DeleteNoteAsync(string filePath);
+        Task<object> CreateNoteAsync(object? initialContent = null);
+        Task<object> EditNoteAsync(object fileName, object content);
+        Task<IEnumerable> LoadNoteAsync(object filename = null);
+        Task DeleteNoteAsync(object filePath);
     }
 }
