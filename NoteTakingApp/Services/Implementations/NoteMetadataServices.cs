@@ -69,7 +69,6 @@ namespace NoteTakingApp.Services.Implementations
         public async Task<Dictionary<string, NoteMetadata>> LoadNoteAsync(string? filename = null)
         {
             IEnumerable<NoteMetadata> notes;
-            string? fname = filename;
             try {
                 notes = await _noteRepository.GetAllNoteFilesAsync();
             }
@@ -83,10 +82,10 @@ namespace NoteTakingApp.Services.Implementations
                     n => n.FileNameWithoutExtension,
                     n => n);
             
-            if (!string.IsNullOrEmpty(fname))
+            if (!string.IsNullOrEmpty(filename))
             {
-                return _noteCache[fname] != null 
-                    ? new Dictionary<string, NoteMetadata> { { fname, _noteCache[fname] } } 
+                return _noteCache[filename] != null 
+                    ? new Dictionary<string, NoteMetadata> { { filename, _noteCache[filename] } } 
                     : new Dictionary<string, NoteMetadata>();
             }
             return _noteCache;
