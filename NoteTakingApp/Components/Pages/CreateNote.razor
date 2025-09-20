@@ -1,5 +1,6 @@
 ﻿@page "/note/create"
 
+@using NoteTakingApp.Models
 @using NoteTakingApp.Services.Implementations
 @using NoteTakingApp.Services.Implementations.TextConverters
 @using NoteTakingApp.Services.Interfaces
@@ -139,6 +140,8 @@
         UpdateCounts();
     }
 
+    private INoteService noteService;
+
     private void UpdateCounts()
     {
 		IMetadataServices metadataService = new MetadataServices();
@@ -158,7 +161,7 @@
             isCreating = true;
             errorMessage = string.Empty;
 
-            var createdNote = await NoteService.CreateNoteAsync(noteContent);
+            var createdNote = await noteService.CreateNoteAsync(noteContent);
 
             // Navigate to the edit page of the newly created note
             Navigation.NavigateTo($"/note/edit/{createdNote.FileName}");

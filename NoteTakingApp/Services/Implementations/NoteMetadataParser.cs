@@ -10,7 +10,7 @@ namespace NoteTakingApp.Services.Implementations
         private static readonly NotesConfiguration _notesConfiguration = new NotesConfiguration();
         private static IMetadataServices metadata_service = new MetadataServices();
 
-        public object Parse(string contents)
+        public NoteMetadata Parse(string contents)
         {
             var metadata = new NoteMetadata();
 

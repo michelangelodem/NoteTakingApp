@@ -1,6 +1,4 @@
-﻿using NoteTakingApp.Context;
-
-namespace NoteTakingApp.Configurations
+﻿namespace NoteTakingApp.Configurations
 {
     public class NotesConfiguration
     {

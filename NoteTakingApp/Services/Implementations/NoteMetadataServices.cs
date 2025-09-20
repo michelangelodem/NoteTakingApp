@@ -22,12 +22,12 @@ namespace NoteTakingApp.Services.Implementations
             _noteCache = new Dictionary<string, NoteMetadata>();
         }
 
-        public async Task<object> CreateNoteAsync(object? initialContent = null)
+        public async Task<NoteMetadata> CreateNoteAsync(string? initialContent = null)
         {
             var createNote = new CreateNote(_notesConfiguration);
             try
             {
-                var noteMetadata = createNote.CreateNoteCommand((string)initialContent);
+                var noteMetadata = createNote.CreateNoteCommand(initialContent);
                 await _noteRepository.AddNoteFileAsync(noteMetadata);
                 
                 _noteCache[noteMetadata.FileNameWithoutExtension] = noteMetadata;
@@ -40,16 +40,16 @@ namespace NoteTakingApp.Services.Implementations
             }
         }
 
-        public async Task<object> EditNoteAsync(object fileName, object content)
+        public async Task<NoteMetadata> EditNoteAsync(string fileName, string content)
         {      
             var updateNote = new UpdateNote(new NotesConfiguration());
             var newNote = new NoteMetadata();
             try
             {
-                var oldNote = await _noteRepository.GetNoteFileAsync((string)fileName);
+                var oldNote = await _noteRepository.GetNoteFileAsync(fileName);
                 //Console.WriteLine($"{oldNote.Content}");
 
-                newNote = await updateNote.UpdateNoteAsync(oldNote, (string)content);
+                newNote = await updateNote.UpdateNoteAsync(oldNote, content);
                 //Console.WriteLine($"{newNote.Content}");
 
                 await _noteRepository.DeleteNoteFileAsync(oldNote.FileName);
@@ -66,10 +66,10 @@ namespace NoteTakingApp.Services.Implementations
             return newNote;
         }
 
-        public async Task<IEnumerable> LoadNoteAsync(object? filename = null)
+        public async Task<Dictionary<string, NoteMetadata>> LoadNoteAsync(string? filename = null)
         {
             IEnumerable<NoteMetadata> notes;
-            string? fname = (string)filename;
+            string? fname = filename;
             try {
                 notes = await _noteRepository.GetAllNoteFilesAsync();
             }
@@ -92,12 +92,12 @@ namespace NoteTakingApp.Services.Implementations
             return _noteCache;
         }
 
-        public async Task DeleteNoteAsync(object filePath)
+        public async Task DeleteNoteAsync(string filePath)
         {
             try
             {
-                await _noteRepository.DeleteNoteFileAsync((string)filePath);
-                _noteCache.Remove(Path.GetFileNameWithoutExtension((string)filePath));
+                await _noteRepository.DeleteNoteFileAsync(filePath);
+                _noteCache.Remove(Path.GetFileNameWithoutExtension(filePath));
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {

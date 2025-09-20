@@ -19,7 +19,7 @@ namespace NoteTakingApp.Services.Implementations
             _logger = logger;
         }
 
-        public async Task<NoteMetadata> GetNoteAsync(string fileName)
+        public async Task<NoteMetadata> GetNoteFileAsync(string fileName)
         {
             var filePath = Path.Combine(_notesConfiguration.NotesDirectory, fileName);
 
@@ -40,7 +40,7 @@ namespace NoteTakingApp.Services.Implementations
             }
         }
 
-        public async Task<IEnumerable<NoteMetadata>> GetAllNoteAsync()
+        public async Task<IEnumerable<NoteMetadata>> GetAllNoteFilesAsync()
         {
             var filepath = _notesConfiguration.NotesDirectory;
             var notes = new List<NoteMetadata>();
@@ -66,7 +66,7 @@ namespace NoteTakingApp.Services.Implementations
             return notes.AsEnumerable();
         }
 
-        public async Task AddNoteAsync(NoteMetadata note)
+        public async Task AddNoteFileAsync(NoteMetadata note)
         {
             string dir = _notesConfiguration.NotesDirectory;
 
@@ -94,7 +94,7 @@ namespace NoteTakingApp.Services.Implementations
             }
         }
 
-        public async Task DeleteNoteAsync(string fileName)
+        public async Task DeleteNoteFileAsync(string fileName)
         {
             var filePath = Path.Combine(_notesConfiguration.NotesDirectory, fileName);
 

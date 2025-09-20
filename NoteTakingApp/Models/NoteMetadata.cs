@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace NoteTakingApp.Models
+﻿namespace NoteTakingApp.Models
 {
     public class NoteMetadata
     {
