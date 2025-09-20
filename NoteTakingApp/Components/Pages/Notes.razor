@@ -1,265 +1,374 @@
 ﻿@page "/notes"
-@using System.Text.RegularExpressions
-@using Humanizer
-@using Microsoft.EntityFrameworkCore.Metadata.Internal
-@using NoteTakingApp.Services.Interfaces
 @using NoteTakingApp.Models
+@using NoteTakingApp.Services.Interfaces
 @inject INoteService NoteService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
-<PageTitle>All Notes - NoteTaking App</PageTitle>
+<PageTitle>My Notes - NoteTaking App</PageTitle>
 
 <div class="container-fluid">
-	<div class="row mb-4">
-		<div class="col-12">
-			<div class="d-flex justify-content-between align-items-center">
-				<h1>
-					<i class="bi bi-list-nested text-primary"></i>
-					All Notes
-				</h1>
-				<a href="note/create" class="btn btn-primary">
-					<i class="bi bi-plus-circle"></i> Create New Note
-				</a>
-			</div>
-		</div>
-	</div>
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1>
+                        <i class="bi bi-journal-text text-primary"></i>
+                        My Notes
+                    </h1>
+                    <p class="text-muted">@notes.Count note(s) found</p>
+                </div>
+                <div>
+                    <a href="/note/create" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> New Note
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
-	@if (isLoading)
-	{
-		<div class="row">
-			<div class="col-12 text-center">
-				<div class="spinner-border text-primary" role="status">
-					<span class="visually-hidden">Loading...</span>
-				</div>
-				<p class="mt-2">Loading notes...</p>
-			</div>
-		</div>
-	}
-	else if (notes != null && notes.Any())
-	{
-		<div class="row mb-3">
-			<div class="col-12">
-				<div class="input-group">
-					<span class="input-group-text">
-						<i class="bi bi-search"></i>
-					</span>
-					<input type="text" class="form-control" placeholder="Search notes..." 
-					       @bind="searchTerm" @oninput="OnSearchInput" />
-				</div>
-			</div>
-		</div>
+    <!-- Search Bar -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text"
+                               class="form-control"
+                               placeholder="Search notes by title or content..."
+                               @bind="searchTerm"
+                               @oninput="OnSearchChanged">
+                        @if (!string.IsNullOrEmpty(searchTerm))
+                        {
+                            <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-		<div class="row mb-3">
-			<div class="col-12">
-				<div class="d-flex align-items-center gap-3">
-					<span class="text-muted">Sort by:</span>
-					<select class="form-select" style="width: auto;" @bind="sortOption">
-						<option value="title">Title</option>
-						<option value="wordcount">Word Count</option>
-					</select>
-					<button class="btn btn-outline-secondary btn-sm" @onclick="ToggleSortDirection">
-						@if (sortAscending)
-						{
-							<i class="bi bi-sort-alpha-down"></i>
-						}
-						else
-						{
-							<i class="bi bi-sort-alpha-up"></i>
-						}
-					</button>
-				</div>
-			</div>
-		</div>
+    <!-- Loading State -->
+    @if (isLoading)
+    {
+        <div class="row">
+            <div class="col-12 text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading your notes...</p>
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    @errorMessage
+                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" @onclick="LoadNotesAsync">
+                        <i class="bi bi-arrow-clockwise"></i> Retry
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+    else if (filteredNotes.Count == 0 && !string.IsNullOrEmpty(searchTerm))
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-search display-4 text-muted"></i>
+                        <h4 class="mt-3">No notes found</h4>
+                        <p class="text-muted">No notes match your search term "<strong>@searchTerm</strong>"</p>
+                        <button class="btn btn-primary" @onclick="ClearSearch">
+                            <i class="bi bi-x-circle"></i> Clear Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (notes.Count == 0)
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-journal-plus display-4 text-muted"></i>
+                        <h4 class="mt-3">No notes yet</h4>
+                        <p class="text-muted">Get started by creating your first note!</p>
+                        <a href="/note/create" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Create Your First Note
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Notes Grid -->
+        <div class="row">
+            @foreach (var note in filteredNotes.Take(displayCount))
+            {
+                <div class="col-xl-4 col-lg-6 col-md-12 mb-4">
+                    <div class="card h-100 note-card" @onclick="() => NavigateToNote(note.FileName)">
+                        <div class="card-header d-flex justify-content-between align-items-start">
+                            <h5 class="card-title mb-0 text-truncate" style="max-width: 200px;" title="@note.DisplayTitle">
+                                @if (note.HasH1Header)
+                                {
+                                    <i class="bi bi-hash text-primary me-1"></i>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-file-earmark-text text-muted me-1"></i>
+                                }
+                                @note.DisplayTitle
+                            </h5>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        @onclick:stopPropagation="true">
+                                    <i class="bi bi-three-dots"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="/note/edit/@note.FileName">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <button class="dropdown-item text-danger" @onclick="() => ConfirmDelete(note)">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="note-preview">
+                                @GetPreviewText(note.Content)
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <small class="text-muted">
+                                <i class="bi bi-file-earmark"></i> @note.FileName
+                                <span class="ms-3">
+                                    <i class="bi bi-fonts"></i> @note.WordCount words
+                                </span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
 
-		<div class="row">
-			@foreach (var note in filteredNotes)
-			{
-				<div class="col-md-6 col-lg-4 mb-4">
-					<div class="card h-100 shadow-sm">
-						<div class="card-body">
-							<h5 class="card-title">
-								@if (note.HasH1Header)
-								{
-									<i class="bi bi-hash text-primary"></i>
-								}
-								else
-								{
-									<i class="bi bi-file-text text-secondary"></i>
-								}
-								@Regex.Replace(note.DisplayTitle, @"^\s*#+\s*", "");
-							</h5>
-							<p class="card-text">
-								<small class="text-muted">
-									<i class="bi bi-body-text"></i> @note.WordCount words
-								</small>
-							</p>
-							<div class="mt-auto">
-								<div class="d-flex gap-2">
-									<a href="@($"note/edit/{note.FileName}")" class="btn btn-sm btn-primary">
-										<i class="bi bi-pencil"></i> Edit
-									</a>
-									<button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteNote(note.FileName)">
-										<i class="bi bi-trash"></i> Delete
-									</button>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			}
-		</div>
-
-		@if (!filteredNotes.Any() && !string.IsNullOrEmpty(searchTerm))
-		{
-			<div class="row">
-				<div class="col-12 text-center">
-					<p class="text-muted">No notes found matching "@searchTerm"</p>
-				</div>
-			</div>
-		}
-	}
-	else
-	{
-		<div class="row">
-			<div class="col-12 text-center">
-				<div class="py-5">
-					<i class="bi bi-journal-x display-1 text-muted"></i>
-					<h3 class="text-muted">No notes yet</h3>
-					<p class="text-muted">Create your first note to get started!</p>
-					<a href="note/create" class="btn btn-primary">
-						<i class="bi bi-plus-circle"></i> Create First Note
-					</a>
-				</div>
-			</div>
-		</div>
-	}
+        @if (filteredNotes.Count > displayCount)
+        {
+            <div class="row">
+                <div class="col-12 text-center">
+                    <button class="btn btn-outline-primary" @onclick="LoadMore">
+                        <i class="bi bi-arrow-down-circle"></i>
+                        Load More (@(filteredNotes.Count - displayCount) remaining)
+                    </button>
+                </div>
+            </div>
+        }
+    }
 </div>
-@if (!string.IsNullOrEmpty(errorMessage))
+
+<!-- Delete Confirmation Modal -->
+@if (noteToDelete != null)
 {
-	<div class="alert alert-danger" role="alert">
-		@errorMessage
-	</div>
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle text-warning"></i>
+                        Confirm Delete
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the note:</p>
+                    <p><strong>"@noteToDelete.DisplayTitle"</strong></p>
+                    <p class="text-muted">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">
+                        Cancel
+                    </button>
+                    <button type="button" class="btn btn-danger" @onclick="DeleteNote" disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        <i class="bi bi-trash"></i> Delete Note
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
-@code {
+<style>
+    .note-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 1px solid #dee2e6;
+    }
 
-    private List<NoteMetadata>? notes;
+        .note-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            border-color: #007bff;
+        }
+
+    .note-preview {
+        max-height: 120px;
+        overflow: hidden;
+        line-height: 1.5;
+        color: #6c757d;
+    }
+
+    .dropdown-toggle::after {
+        display: none;
+    }
+</style>
+
+@code {
+    private Dictionary<string, NoteMetadata> notes = new();
     private List<NoteMetadata> filteredNotes = new();
     private bool isLoading = true;
+    private string errorMessage = string.Empty;
     private string searchTerm = string.Empty;
-	private string errorMessage = string.Empty;
-
-    private string sortOptionBacking = "modified";
-    private string sortOption
-    {
-        get => sortOptionBacking;
-        set
-        {
-            if (sortOptionBacking != value)
-            {
-                sortOptionBacking = value;
-                SortNotes();
-            }
-        }
-	}
-
-    private bool sortAscending = false;
+    private int displayCount = 9;
+    private NoteMetadata? noteToDelete = null;
+    private bool isDeleting = false;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadNotes();
+        await LoadNotesAsync();
     }
 
-    private async Task LoadNotes()
+    private async Task LoadNotesAsync()
     {
         try
         {
             isLoading = true;
-            var notesDict = await NoteService.LoadNoteAsync();
-            notes = notesDict.Values.ToList();
-            ApplyFiltersAndSort();
+            errorMessage = string.Empty;
+
+            notes = await NoteService.LoadNoteAsync();
+            FilterNotes();
         }
-		catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+        catch (Exception ex)
         {
-			ShowError("Error loading notes, you have no current access");
+            errorMessage = $"Failed to load notes: {ex.Message}";
         }
         finally
         {
             isLoading = false;
+            StateHasChanged();
         }
     }
 
-    private void OnSearchInput(ChangeEventArgs e)
+    private void OnSearchChanged(ChangeEventArgs e)
     {
         searchTerm = e.Value?.ToString() ?? string.Empty;
-        //Console.WriteLine($"Search term: {searchTerm}");
-        ApplyFiltersAndSort();
-
-        searchTerm = null;
+        FilterNotes();
+        displayCount = 9; // Reset display count when searching
     }
 
-    private void SortNotes()
+    private void FilterNotes()
     {
-        ApplyFiltersAndSort();
-    }
-
-    private void ToggleSortDirection()
-    {
-        sortAscending = !sortAscending;
-        ApplyFiltersAndSort();
-    }
-
-    private void ApplyFiltersAndSort()
-    {
-        if (notes == null) return;
-        
-        var filtered = notes.AsEnumerable();
-
-        // Apply search filter
-        if (!string.IsNullOrEmpty(searchTerm))
+        if (string.IsNullOrWhiteSpace(searchTerm))
         {
-            filtered = filtered.Where(n => 
-                n.DisplayTitle.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                n.Content.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+            filteredNotes = notes.Values.OrderByDescending(n => n.FileName).ToList();
         }
-
-        // Apply sorting
-        filtered = sortOption switch
+        else
         {
-            "title" => sortAscending 
-                ? filtered.OrderBy(n => n.DisplayTitle) 
-                : filtered.OrderByDescending(n => n.DisplayTitle),
-            "wordcount" => sortAscending 
-                ? filtered.OrderBy(n => n.WordCount) 
-                : filtered.OrderByDescending(n => n.WordCount)
-        };
-
-        filteredNotes = filtered.ToList();
+            var term = searchTerm.ToLower();
+            filteredNotes = notes.Values
+                .Where(n => n.DisplayTitle.ToLower().Contains(term) ||
+                           n.Content.ToLower().Contains(term))
+                .OrderByDescending(n => n.FileName)
+                .ToList();
+        }
         StateHasChanged();
     }
 
-    private async Task DeleteNote(string fileName)
+    private void ClearSearch()
     {
+        searchTerm = string.Empty;
+        FilterNotes();
+    }
+
+    private void LoadMore()
+    {
+        displayCount += 9;
+    }
+
+    private void NavigateToNote(string fileName)
+    {
+        Navigation.NavigateTo($"/note/edit/{fileName}");
+    }
+
+    private void ConfirmDelete(NoteMetadata note)
+    {
+        noteToDelete = note;
+    }
+
+    private void CancelDelete()
+    {
+        noteToDelete = null;
+    }
+
+    private async Task DeleteNote()
+    {
+        if (noteToDelete == null) return;
+
         try
         {
-            await NoteService.DeleteNoteAsync(fileName);
-            await LoadNotes();
+            isDeleting = true;
+            await NoteService.DeleteNoteAsync(noteToDelete.FileName);
+
+            notes.Remove(noteToDelete.FileNameWithoutExtension);
+            FilterNotes();
+
+            noteToDelete = null;
         }
         catch (Exception ex)
         {
-            ShowError($"Error deleting note: {ex.Message}");
+            errorMessage = $"Failed to delete note: {ex.Message}";
+        }
+        finally
+        {
+            isDeleting = false;
         }
     }
 
-	private void ShowError(string message)
+    private string GetPreviewText(string content)
     {
-        errorMessage = message;
-        StateHasChanged();
-        // Clear error after 5 seconds
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(5000);
-            errorMessage = string.Empty;
-            StateHasChanged();
-        });
-	}
+        if (string.IsNullOrWhiteSpace(content)) return "Empty note...";
+
+        // Remove markdown syntax for preview
+        var preview = content
+            .Replace("#", "")
+            .Replace("*", "")
+            .Replace("`", "")
+            .Replace("\n", " ")
+            .Trim();
+
+        return preview.Length > 150 ? preview.Substring(0, 150) + "..." : preview;
+    }
 }

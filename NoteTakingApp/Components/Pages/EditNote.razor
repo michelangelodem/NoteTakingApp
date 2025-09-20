@@ -1,192 +1,262 @@
-﻿@page "/note/edit/{FileName}"
-@using NoteTakingApp.Configurations
-@using NoteTakingApp.Services.Interfaces
+﻿@page "/note/edit/{fileName}"
 @using NoteTakingApp.Models
 @using NoteTakingApp.Services.Implementations
 @using NoteTakingApp.Services.Implementations.TextConverters
+@using NoteTakingApp.Services.Interfaces
 @inject INoteService NoteService
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
-<PageTitle>Edit Note - NoteTaking App</PageTitle>
+<PageTitle>Edit Note - @(currentNote?.DisplayTitle ?? "Loading...")</PageTitle>
 
-@if (isLoading)
-{
-    <div class="container-fluid">
+<div class="container-fluid">
+    @if (isLoading)
+    {
         <div class="row">
-            <div class="col-12 text-center py-5">
+            <div class="col-12 text-center">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
-                <p class="mt-2">Loading note...</p>
+                <p class="mt-2 text-muted">Loading note...</p>
             </div>
         </div>
-    </div>
-}
-else if (currentNote != null)
-{
-    <div class="container-fluid">
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    @errorMessage
+                    <a href="/notes" class="btn btn-outline-danger ms-2">
+                        <i class="bi bi-arrow-left"></i> Back to Notes
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+    else if (currentNote != null)
+    {
         <div class="row mb-4">
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h1>
-                        <i class="bi bi-pencil text-primary"></i>
-                        Edit: @currentNote.DisplayTitle
-                    </h1>
-                    <div class="d-flex gap-2">
-                        <a href="notes" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-left"></i> Back to Notes
-                        </a>
-                        <button class="btn btn-outline-danger" @onclick="DeleteCurrentNote">
-                            <i class="bi bi-trash"></i> Delete Note
+                    <div>
+                        <h1>
+                            <i class="bi bi-pencil-square text-primary"></i>
+                            Edit Note
+                        </h1>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/notes">Notes</a></li>
+                                <li class="breadcrumb-item active">@currentNote.DisplayTitle</li>
+                            </ol>
+                        </nav>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-outline-secondary" @onclick="TogglePreview">
+                            <i class="bi @(showPreview ? "bi-code-square" : "bi-eye")"></i>
+                            @(showPreview ? "Edit" : "Preview")
                         </button>
+                        <a href="/notes" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Back
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="card bg-light">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3">
+        <div class="row">
+            <div class="@(showPreview ? "col-lg-6" : "col-12")">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-pencil"></i> Editor
+                        </h5>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-info" @onclick="ToggleWordWrap">
+                                <i class="bi @(wordWrap ? "bi-text-wrap" : "bi-text-left")"></i>
+                            </button>
+                            @if (hasUnsavedChanges)
+                            {
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-exclamation-circle"></i> Unsaved
+                                </span>
+                            }
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <textarea id="noteEditor"
+                                  class="form-control @(wordWrap ? "text-wrap" : "text-nowrap")"
+                                  style="min-height: 600px; resize: vertical; border: none; font-family: 'Consolas', 'Monaco', monospace;"
+                                  @bind="noteContent"
+                                  @oninput="OnContentChange"
+                                  @onkeydown="OnKeyDown">
+                            </textarea>
+                    </div>
+                    <div class="card-footer">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
                                 <small class="text-muted">
-                                    <i class="bi bi-file-earmark"></i>
-                                    <strong>File:</strong> @currentNote.FileName
+                                    <i class="bi bi-fonts"></i> @wordCount words
+                                    <span class="ms-3">
+                                        <i class="bi bi-file-earmark"></i> @characterCount chars
+                                    </span>
                                 </small>
                             </div>
-                            <div class="col-md-3">
-                                <small class="text-muted">
-                                    <i class="bi bi-calendar-plus"></i>
-                                    <strong>Created:</strong>
-                                </small>
-                            </div>
-                            <div class="col-md-3">
-                                <small class="text-muted">
-                                    <i class="bi bi-calendar"></i>
-                                    <strong>Modified:</strong>
-                                </small>
-                            </div>
-                            <div class="col-md-3">
-                                <small class="text-muted">
-                                    <i class="bi bi-body-text"></i>
-                                    <strong>Words:</strong> @wordCount
-                                </small>
+                            <div class="col-md-6 text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button"
+                                            class="btn btn-success"
+                                            @onclick="SaveNoteAsync"
+                                            disabled="@(isSaving || !hasUnsavedChanges)">
+                                        @if (isSaving)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                        }
+                                        <i class="bi bi-floppy"></i> Save
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-outline-secondary"
+                                            @onclick="RevertChanges"
+                                            disabled="@(!hasUnsavedChanges)">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Revert
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="row">
-            <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-pencil"></i> Editor
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <form @onsubmit="SaveNote" @onsubmit:preventDefault="true">
-                            <div class="mb-3">
-                                <label for="noteContent" class="form-label">Note Content (Markdown)</label>
-                                <textarea id="noteContent"
-                                          class="form-control font-monospace"
-                                          rows="20"
-                                          @bind="noteContent"
-                                          @oninput="OnContentChange"></textarea>
-                            </div>
-
-                            <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-primary" disabled="@isSaving">
-                                    @if (isSaving)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    }
-                                    <i class="bi bi-floppy"></i> Save Changes
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary" @onclick="RevertChanges">
-                                    <i class="bi bi-arrow-counterclockwise"></i> Revert Changes
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-eye"></i> Preview
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        @if (!string.IsNullOrEmpty(noteContent))
-                        {
-                            <div class="preview-content">
-                                @((MarkupString)ConvertMarkdownToHtml(noteContent))
-                            </div>
-
-                            <hr class="my-3" />
-
-                            <div class="text-muted small">
-                                <div class="row">
-                                    <div class="col-6">
-                                        <strong>Word Count:</strong> @wordCount
-                                    </div>
-                                    <div class="col-6">
-                                        <strong>Character Count:</strong> @characterCount
-                                    </div>
+            @if (showPreview)
+            {
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-eye"></i> Preview
+                            </h5>
+                        </div>
+                        <div class="card-body" style="min-height: 600px;">
+                            @if (!string.IsNullOrEmpty(noteContent))
+                            {
+                                <div class="preview-content">
+                                    @((MarkupString)ConvertMarkdownToHtml(noteContent))
                                 </div>
-                                @if (hasUnsavedChanges)
-                                {
-                                    <div class="mt-2">
-                                        <span class="badge bg-warning">
-                                            <i class="bi bi-exclamation-triangle"></i> Unsaved changes
-                                        </span>
-                                    </div>
-                                }
-                            </div>
-                        }
-                        else
-                        {
-                            <p class="text-muted">No content to preview...</p>
-                        }
+                            }
+                            else
+                            {
+                                <p class="text-muted">Start typing to see a preview...</p>
+                            }
+                        </div>
                     </div>
                 </div>
-            </div>
+            }
         </div>
 
-        @if (!string.IsNullOrEmpty(message))
+        @if (!string.IsNullOrEmpty(saveMessage))
         {
             <div class="row mt-3">
                 <div class="col-12">
-                    <div class="alert @(messageIsError ? "alert-danger" : "alert-success")">
-                        <i class="bi @(messageIsError ? "bi-exclamation-triangle" : "bi-check-circle")"></i>
-                        @message
+                    <div class="alert @(saveMessage.Contains("Error") ? "alert-danger" : "alert-success") alert-dismissible">
+                        <i class="bi @(saveMessage.Contains("Error") ? "bi-exclamation-triangle" : "bi-check-circle")"></i>
+                        @saveMessage
+                        <button type="button" class="btn-close" @onclick="() => saveMessage = string.Empty"></button>
                     </div>
                 </div>
             </div>
         }
-    </div>
-}
-else
+    }
+</div>
+
+<!-- Keyboard Shortcuts Help Modal -->
+@if (showShortcutsModal)
 {
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-12 text-center py-5">
-                <i class="bi bi-file-x display-1 text-muted"></i>
-                <h3 class="text-muted">Note not found</h3>
-                <p class="text-muted">The requested note could not be loaded.</p>
-                <a href="notes" class="btn btn-primary">
-                    <i class="bi bi-arrow-left"></i> Back to Notes
-                </a>
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-keyboard"></i>
+                        Keyboard Shortcuts
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="() => showShortcutsModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-6"><strong>Ctrl + S</strong></div>
+                        <div class="col-6">Save note</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><strong>Ctrl + P</strong></div>
+                        <div class="col-6">Toggle preview</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><strong>Ctrl + ?</strong></div>
+                        <div class="col-6">Show this help</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6"><strong>Ctrl + W</strong></div>
+                        <div class="col-6">Toggle word wrap</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 }
+
+<style>
+    .preview-content {
+        line-height: 1.6;
+    }
+
+        .preview-content h1 {
+            color: #2c3e50;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .preview-content h2 {
+            color: #34495e;
+            margin-top: 1.25rem;
+            margin-bottom: 0.875rem;
+        }
+
+        .preview-content h3 {
+            color: #495057;
+            margin-top: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .preview-content code {
+            background-color: #f8f9fa;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+        }
+
+        .preview-content pre {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.375rem;
+        }
+
+        .preview-content blockquote {
+            border-left: 4px solid #007bff;
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: #6c757d;
+        }
+
+    .text-nowrap textarea {
+        white-space: nowrap;
+        overflow-x: auto;
+    }
+
+    .text-wrap textarea {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+</style>
 
 @code {
     [Parameter] public string FileName { get; set; } = string.Empty;
@@ -196,34 +266,48 @@ else
     private string originalContent = string.Empty;
     private bool isLoading = true;
     private bool isSaving = false;
-    private string message = string.Empty;
-    private bool messageIsError = false;
+    private bool showPreview = false;
+    private bool wordWrap = true;
+    private bool showShortcutsModal = false;
+    private string errorMessage = string.Empty;
+    private string saveMessage = string.Empty;
     private int wordCount = 0;
     private int characterCount = 0;
     private bool hasUnsavedChanges = false;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
-        await LoadNote();
+        if (!string.IsNullOrEmpty(FileName))
+        {
+            await LoadNoteAsync();
+        }
     }
 
-    private async Task LoadNote()
+    private async Task LoadNoteAsync()
     {
         try
-        {   
+        {
             isLoading = true;
+            errorMessage = string.Empty;
 
-            currentNote = (await NoteService.LoadNoteAsync(FileName))[FileName];
-			if (currentNote != null)
+            var notes = await NoteService.LoadNoteAsync(Path.GetFileNameWithoutExtension(FileName));
+
+            if (notes.Any())
             {
+                currentNote = notes.First().Value;
                 noteContent = currentNote.Content;
                 originalContent = currentNote.Content;
                 UpdateCounts();
+                hasUnsavedChanges = false;
+            }
+            else
+            {
+                errorMessage = "Note not found.";
             }
         }
-        catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException)
+        catch (Exception ex)
         {
-            ShowMessage($"Error loading note: {ex.Message}", true);
+            errorMessage = $"Failed to load note: {ex.Message}";
         }
         finally
         {
@@ -234,31 +318,58 @@ else
     private void OnContentChange(ChangeEventArgs e)
     {
         noteContent = e.Value?.ToString() ?? string.Empty;
-        hasUnsavedChanges = noteContent != originalContent;
         UpdateCounts();
+        hasUnsavedChanges = noteContent != originalContent;
+        ClearSaveMessage();
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.CtrlKey)
+        {
+            switch (e.Key.ToLower())
+            {
+                case "s":
+                    await JSRuntime.InvokeVoidAsync("eval", "event.preventDefault()");
+                    await SaveNoteAsync();
+                    break;
+                case "p":
+                    await JSRuntime.InvokeVoidAsync("eval", "event.preventDefault()");
+                    TogglePreview();
+                    break;
+                case "w":
+                    await JSRuntime.InvokeVoidAsync("eval", "event.preventDefault()");
+                    ToggleWordWrap();
+                    break;
+                case "?":
+                    await JSRuntime.InvokeVoidAsync("eval", "event.preventDefault()");
+                    showShortcutsModal = true;
+                    break;
+            }
+        }
     }
 
     private void UpdateCounts()
     {
-	    IMetadataServices metadataService = new MetadataServices();
-	    (characterCount, wordCount) = metadataService.UpdateCount(noteContent);
-	    
+        IMetadataServices metadataService = new MetadataServices();
+        (characterCount, wordCount) = metadataService.UpdateCount(noteContent);
     }
 
-    private async Task SaveNote()
+    private async Task SaveNoteAsync()
     {
-        if (currentNote == null) return;
+        if (currentNote == null || isSaving || !hasUnsavedChanges) return;
 
         try
         {
             isSaving = true;
-            message = string.Empty;
+            saveMessage = string.Empty;
 
             var updatedNote = await NoteService.EditNoteAsync(currentNote.FileName, noteContent);
 
+            // Check if the filename changed (title change)
             if (updatedNote.FileName != currentNote.FileName)
             {
-                // Note was renamed, navigate to new URL
+                // Navigate to the new filename
                 Navigation.NavigateTo($"/note/edit/{updatedNote.FileName}");
                 return;
             }
@@ -266,11 +377,19 @@ else
             currentNote = updatedNote;
             originalContent = noteContent;
             hasUnsavedChanges = false;
-            ShowMessage("Note saved successfully!", false);
+            saveMessage = "Note saved successfully!";
+
+            // Auto-hide success message after 3 seconds
+            await Task.Delay(3000);
+            if (saveMessage == "Note saved successfully!")
+            {
+                saveMessage = string.Empty;
+                StateHasChanged();
+            }
         }
-        catch (Exception ex) when (ex is ParsingNoteException || ex is IOException)
+        catch (Exception ex)
         {
-            ShowMessage($"Error saving note: {ex.Message}. Please enter valid content. If error persists then it's us UwU.", true);
+            saveMessage = $"Error saving note: {ex.Message}";
         }
         finally
         {
@@ -283,41 +402,30 @@ else
         noteContent = originalContent;
         hasUnsavedChanges = false;
         UpdateCounts();
-        ShowMessage("Changes reverted.", false);
+        saveMessage = "Changes reverted.";
     }
 
-    private async Task DeleteCurrentNote()
+    private void TogglePreview()
     {
-        if (currentNote == null) return;
-
-        try
-        {
-            await NoteService.DeleteNoteAsync(currentNote.FileName);
-            Navigation.NavigateTo("/notes");
-        }
-        catch (Exception ex)
-        {
-            ShowMessage($"Error deleting note: {ex.Message}", true);
-        }
+        showPreview = !showPreview;
     }
 
-    private void ShowMessage(string msg, bool isError)
+    private void ToggleWordWrap()
     {
-        message = msg;
-        messageIsError = isError;
-        StateHasChanged();
+        wordWrap = !wordWrap;
+    }
 
-        // Clear message after 3 seconds
-        _ = Task.Delay(3000).ContinueWith(_ =>
+    private void ClearSaveMessage()
+    {
+        if (!string.IsNullOrEmpty(saveMessage))
         {
-            message = string.Empty;
-            InvokeAsync(StateHasChanged);
-        });
+            saveMessage = string.Empty;
+        }
     }
 
     private string ConvertMarkdownToHtml(string markdown)
     {
-		ITextConverter convert = new MarkdownToHTML();
-		return convert.ConvertText(markdown);
+        ITextConverter converter = new MarkdownToHTML();
+        return converter.ConvertText(markdown);
     }
 }

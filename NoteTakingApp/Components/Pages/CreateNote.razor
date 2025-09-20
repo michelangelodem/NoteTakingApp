@@ -1,11 +1,11 @@
 ﻿@page "/note/create"
-
 @using NoteTakingApp.Models
 @using NoteTakingApp.Services.Implementations
 @using NoteTakingApp.Services.Implementations.TextConverters
 @using NoteTakingApp.Services.Interfaces
 @inject INoteService NoteService
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Create Note - NoteTaking App</PageTitle>
 
@@ -13,140 +13,299 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
-                <h1>
-                    <i class="bi bi-plus-circle text-primary"></i>
-                    Create New Note
-                </h1>
-                <a href="notes" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to Notes
-                </a>
+                <div>
+                    <h1>
+                        <i class="bi bi-plus-circle text-primary"></i>
+                        Create New Note
+                    </h1>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+                            <li class="breadcrumb-item"><a href="/notes">Notes</a></li>
+                            <li class="breadcrumb-item active">Create</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-outline-secondary" @onclick="TogglePreview">
+                        <i class="bi @(showPreview ? "bi-code-square" : "bi-eye")"></i>
+                        @(showPreview ? "Edit" : "Preview")
+                    </button>
+                    <button class="btn btn-outline-info" @onclick="ShowMarkdownHelp">
+                        <i class="bi bi-question-circle"></i>
+                        Help
+                    </button>
+                    <a href="/notes" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Notes
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-pencil"></i> Editor
-                    </h5>
+        <div class="@(showPreview ? "col-lg-6" : "col-12")">
+                <div class="card-body p-0">
+                    <textarea id="noteEditor"
+                              @ref="textAreaRef"
+                              class="form-control"
+                              style="min-height: 600px; resize: vertical; border: none; font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace; font-size: 0.9rem;"
+                              @bind="noteContent"
+                              @oninput="OnContentChange"
+                              @onkeydown="OnKeyDown"
+                              placeholder="# Your Note Title
+
+Start writing your note here. Use Markdown syntax for formatting.
+
+## Examples:
+- **Bold text**
+- *Italic text*
+- [Links](https://example.com)
+- `Code snippets`
+
+### Lists:
+1. Numbered item
+2. Another item
+
+- Bullet point
+- Another bullet">
+                    </textarea>
                 </div>
-                <div class="card-body">
-                    <form @onsubmit="CreateNoteAsync" @onsubmit:preventDefault="true">
-                        <div class="mb-3">
-                            <label for="noteContent" class="form-label">Note Content (Markdown)</label>
-								<textarea id="noteContent"
-                                      class="form-control font-monospace"
-                                      rows="20"
-                                      @bind="noteContent"
-                                      @oninput="OnContentChange"
-                                      placeholder="# Your Note Title
-
-								Start writing your note here. Use Markdown syntax for formatting.
-
-								## Examples:
-								- **Bold text**
-								- *Italic text*
-								- [Links](https://example.com)
-								- `Code snippets`
-
-								### Lists:
-								1. Numbered item
-								2. Another item
-
-								- Bullet point
-								- Another bullet">
-
-							</textarea>
-                        </div>
-
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary" disabled="@isCreating">
-                                @if (isCreating)
+                <div class="card-footer">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <small class="text-muted">
+                                <i class="bi bi-fonts"></i> @wordCount words
+                                <span class="ms-3">
+                                    <i class="bi bi-file-earmark"></i> @characterCount chars
+                                </span>
+                                @if (!string.IsNullOrEmpty(predictedFileName))
                                 {
-                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    <span class="ms-3">
+										<i class="bi bi-file-text"></i> @predictedFileName
+                                    </span>
                                 }
-                                <i class="bi bi-floppy"></i> Create Note
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" @onclick="ClearContent">
-                                <i class="bi bi-x-circle"></i> Clear
-                            </button>
+                            </small>
                         </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-eye"></i> Preview
-                    </h5>
-                </div>
-                <div class="card-body">
-                    @if (!string.IsNullOrEmpty(noteContent))
-                    {
-                        <div class="preview-content">
-                            @((MarkupString)ConvertMarkdownToHtml(noteContent))
-                        </div>
-
-                        <hr class="my-3" />
-
-                        <div class="text-muted small">
-                            <div class="row">
-                                <div class="col-6">
-                                    <strong>Word Count:</strong> @wordCount
-                                </div>
-                                <div class="col-6">
-                                    <strong>Character Count:</strong> @characterCount
-                                </div>
+                        <div class="col-md-6 text-end">
+                            <div class="btn-group">
+                                <button type="button"
+                                        class="btn btn-success"
+                                        @onclick="CreateNoteAsync"
+                                        disabled="@(isCreating || string.IsNullOrWhiteSpace(noteContent))">
+                                    @if (isCreating)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    <i class="bi bi-floppy"></i> Create Note
+                                </button>
+                                <button type="button"
+                                        class="btn btn-outline-secondary"
+                                        @onclick="ClearContent"
+                                        disabled="@(string.IsNullOrWhiteSpace(noteContent))">
+                                    <i class="bi bi-x-circle"></i> Clear
+                                </button>
                             </div>
                         </div>
-                    }
-                    else
-                    {
-                        <p class="text-muted">Start typing to see a preview of your note...</p>
-                    }
+                    </div>
                 </div>
             </div>
         </div>
+
+        @if (showPreview)
+        {
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-eye"></i> Preview
+                        </h5>
+                        @if (!string.IsNullOrEmpty(predictedTitle))
+                        {
+                            <small class="text-muted">Title: @predictedTitle</small>
+                        }
+                    </div>
+                    <div class="card-body" style="min-height: 600px; overflow-y: auto;">
+                        @if (!string.IsNullOrEmpty(noteContent))
+                        {
+                            <div class="preview-content">
+                                @((MarkupString)ConvertMarkdownToHtml(noteContent))
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center text-muted py-5">
+                                <i class="bi bi-journal-plus display-4"></i>
+                                <p class="mt-3">Start typing to see a preview of your note...</p>
+                                <p class="small">Use Markdown syntax for rich formatting</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 
     @if (!string.IsNullOrEmpty(errorMessage))
     {
         <div class="row mt-3">
             <div class="col-12">
-                <div class="alert alert-danger">
+                <div class="alert alert-danger alert-dismissible">
                     <i class="bi bi-exclamation-triangle"></i>
                     @errorMessage
+                    <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
                 </div>
             </div>
         </div>
     }
-</div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="alert alert-success alert-dismissible">
+                    <i class="bi bi-check-circle"></i>
+                    @successMessage
+                    <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+                </div>
+            </div>
+        </div>
+    }
+
+<!-- Markdown Help Modal -->
+@if (showHelpModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-info-circle text-info"></i>
+                        Markdown Quick Reference
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="() => showHelpModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="bi bi-type"></i> Headers</h6>
+                            <code># H1 Header</code><br>
+                            <code>## H2 Header</code><br>
+                            <code>### H3 Header</code><br><br>
+
+                            <h6><i class="bi bi-fonts"></i> Text Formatting</h6>
+                            <code>**bold text**</code><br>
+                            <code>*italic text*</code><br>
+                            <code>`inline code`</code><br>
+                            <code>==highlighted==</code><br><br>
+
+                            <h6><i class="bi bi-list-ul"></i> Lists</h6>
+                            <code>- Bullet point</code><br>
+                            <code>1. Numbered item</code><br>
+                            <code>- [ ] Checkbox</code><br>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="bi bi-link-45deg"></i> Links & Images</h6>
+                            <code>[Link text](URL)</code><br>
+                            <code>![Alt text](image-url)</code><br><br>
+
+                            <h6><i class="bi bi-code-square"></i> Code Blocks</h6>
+                            <code>```language</code><br>
+                            <code>code here</code><br>
+                            <code>```</code><br><br>
+
+                            <h6><i class="bi bi-chat-quote"></i> Quotes</h6>
+                            <code>> Blockquote text</code><br><br>
+
+                            <h6><i class="bi bi-keyboard"></i> Shortcuts</h6>
+                            <code>Ctrl + S</code> - Create note<br>
+                            <code>Ctrl + P</code> - Toggle preview<br>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" @onclick="() => showHelpModal = false">
+                        Got it!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     private string noteContent = string.Empty;
     private bool isCreating = false;
+    private bool showPreview = false;
+    private bool showHelpModal = false;
     private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
     private int wordCount = 0;
     private int characterCount = 0;
+    private bool hasUnsavedChanges = false;
+    private string predictedTitle = string.Empty;
+    private string predictedFileName = string.Empty;
+    private ElementReference textAreaRef;
 
     private void OnContentChange(ChangeEventArgs e)
     {
         noteContent = e.Value?.ToString() ?? string.Empty;
         UpdateCounts();
+        UpdatePredictions();
+        hasUnsavedChanges = !string.IsNullOrWhiteSpace(noteContent);
+        ClearMessages();
     }
 
-    private INoteService noteService;
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.CtrlKey)
+        {
+            switch (e.Key.ToLower())
+            {
+                case "s":
+                    await JSRuntime.InvokeVoidAsync("eval", "event.preventDefault()");
+                    await CreateNoteAsync();
+                    break;
+                case "p":
+                    await JSRuntime.InvokeVoidAsync("eval", "event.preventDefault()");
+                    TogglePreview();
+                    break;
+                case "/":
+                    await JSRuntime.InvokeVoidAsync("eval", "event.preventDefault()");
+                    ShowMarkdownHelp();
+                    break;
+            }
+        }
+    }
 
     private void UpdateCounts()
     {
-		IMetadataServices metadataService = new MetadataServices();
-		(characterCount, wordCount) = metadataService.UpdateCount(noteContent);
-	}
+        IMetadataServices metadataService = new MetadataServices();
+        (characterCount, wordCount) = metadataService.UpdateCount(noteContent);
+    }
+
+    private void UpdatePredictions()
+    {
+        if (!string.IsNullOrWhiteSpace(noteContent))
+        {
+            try
+            {
+                IMetadataServices metadataService = new MetadataServices();
+                predictedTitle = metadataService.ExtractTitleFromContent(noteContent) ?? "Untitled Note";
+                predictedFileName = metadataService.GenerateFileNameFromTitle(predictedTitle);
+            }
+            catch
+            {
+                predictedTitle = "Untitled Note";
+                predictedFileName = "Untitled_Note";
+            }
+        }
+        else
+        {
+            predictedTitle = string.Empty;
+            predictedFileName = string.Empty;
+        }
+    }
 
     private async Task CreateNoteAsync()
     {
@@ -160,15 +319,23 @@
         {
             isCreating = true;
             errorMessage = string.Empty;
+            successMessage = string.Empty;
 
-            var createdNote = await noteService.CreateNoteAsync(noteContent);
+            var createdNote = await NoteService.CreateNoteAsync(noteContent);
 
-            // Navigate to the edit page of the newly created note
+            successMessage = $"Note '{createdNote.DisplayTitle}' created successfully!";
+
+            // Wait a moment to show the success message, then navigate
+            await Task.Delay(1500);
             Navigation.NavigateTo($"/note/edit/{createdNote.FileName}");
         }
-		catch (Exception ex) when (ex is IOException || ex is ParsingNoteException)
+        catch (Exception ex) when (ex is IOException || ex is ParsingNoteException)
         {
-            errorMessage = $"Error creating note: {ex.Message}, please try again with valid content.";
+            errorMessage = $"Error creating note: {ex.Message}. Please try again with valid content.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Unexpected error: {ex.Message}. Please try again.";
         }
         finally
         {
@@ -179,13 +346,51 @@
     private void ClearContent()
     {
         noteContent = string.Empty;
-        errorMessage = string.Empty;
+        hasUnsavedChanges = false;
+        predictedTitle = string.Empty;
+        predictedFileName = string.Empty;
         UpdateCounts();
+        ClearMessages();
+    }
+
+    private void ClearMessages()
+    {
+        if (!string.IsNullOrEmpty(errorMessage) || !string.IsNullOrEmpty(successMessage))
+        {
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+        }
+    }
+
+    private void TogglePreview()
+    {
+        showPreview = !showPreview;
+    }
+
+    private void ShowMarkdownHelp()
+    {
+        showHelpModal = true;
     }
 
     private string ConvertMarkdownToHtml(string markdown)
     {
-	    ITextConverter convert = new MarkdownToHTML();
-		return convert.ConvertText(markdown);
+        ITextConverter converter = new MarkdownToHTML();
+        return converter.ConvertText(markdown);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Focus the textarea
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("eval", "document.getElementById('noteEditor').focus()");
+            }
+            catch
+            {
+                // Ignore if focus fails
+            }
+        }
     }
 }
