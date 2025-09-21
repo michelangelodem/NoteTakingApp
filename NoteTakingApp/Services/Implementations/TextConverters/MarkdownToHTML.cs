@@ -1,4 +1,6 @@
 ﻿using NoteTakingApp.Services.Interfaces;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace NoteTakingApp.Services.Implementations.TextConverters
 {
@@ -10,7 +12,7 @@ namespace NoteTakingApp.Services.Implementations.TextConverters
             return ConvertMarkdownToHtml(input);
         }
 
-        private static string ConvertMarkdownToHtml(string markdown)
+        private string ConvertMarkdownToHtml(string markdown)
         {
             if (string.IsNullOrEmpty(markdown)) return string.Empty;
 
@@ -34,14 +36,12 @@ namespace NoteTakingApp.Services.Implementations.TextConverters
             // Line breaks
             html = html.Replace("\n", "<br/>");
 
-            html = ConvertList(html, true); // Unordered lists
-
-            html = ConvertList(html, false); // Ordered lists
+            html = ConvertLists(html);
 
             return html;
         }
 
-        private static string ConvertHeaders(string input)
+        private string ConvertHeaders(string input)
         {
             if (string.IsNullOrEmpty(input)) return string.Empty;
 
@@ -55,7 +55,7 @@ namespace NoteTakingApp.Services.Implementations.TextConverters
             return output;
         }
 
-        private static string ConvertBoldAndItalic(string input)
+        private string ConvertBoldAndItalic(string input)
         {
             if (string.IsNullOrEmpty(input)) return string.Empty;
 
@@ -65,7 +65,7 @@ namespace NoteTakingApp.Services.Implementations.TextConverters
             return output;
         }
 
-        private static string ConvertCode(string input)
+        private string ConvertCode(string input)
         {
             if (string.IsNullOrEmpty(input)) return string.Empty;
 
@@ -73,7 +73,7 @@ namespace NoteTakingApp.Services.Implementations.TextConverters
             return output;
         }
 
-        private static string ConvertLinks(string input)
+        private string ConvertLinks(string input)
         {
             if (string.IsNullOrEmpty(input)) return string.Empty;
 
@@ -82,40 +82,63 @@ namespace NoteTakingApp.Services.Implementations.TextConverters
             return output;
         }
 
-        private static string ConvertList(string input, bool isUL = true)
+        private string ConvertLists(string input)
         {
             if (string.IsNullOrEmpty(input)) return string.Empty;
 
             var lines = input.Split('\n');
-            var insideList = false;
-            var output = "";
+            var sb = new StringBuilder();
 
-            foreach (var line in lines)
+            bool inUl = false;
+            bool inOl = false;
+
+            for (int i = 0; i < lines.Length; i++)
             {
-                if (line.StartsWith("-"))
-                {
-                    if (!insideList)
-                    {
-                        if (isUL) output += "<ul>";
-                        else output += "<ol>";
-                        
-                        insideList = true;
-                    }
-                    output += "<li>" + line.Substring(2) + "</li>";
-                }
-                else 
-                {
-                    if (insideList)
-                    {
-                        if (isUL) output += "</ul>";
-                        else output += "</ol>";
+                var line = lines[i];
 
-                        insideList = false;
+                // detect unordered list item: -, +, or *
+                var ulMatch = Regex.Match(line, @"^\s*[-\+\*]\s+(.*)");
+                // detect ordered list: 1. 2. etc.
+                var olMatch = Regex.Match(line, @"^\s*\d+\.\s+(.*)");
+
+                if (ulMatch.Success)
+                {
+                    // start ul if needed
+                    if (!inUl)
+                    {
+                        // close ol if open
+                        if (inOl) { sb.AppendLine("</ol>"); inOl = false; }
+                        sb.AppendLine("<ul>");
+                        inUl = true;
                     }
+                    sb.AppendLine("<li>" + ulMatch.Groups[1].Value + "</li>");
+                }
+                else if (olMatch.Success)
+                {
+                    if (!inOl)
+                    {
+                        if (inUl) { sb.AppendLine("</ul>"); inUl = false; }
+                        sb.AppendLine("<ol>");
+                        inOl = true;
+                    }
+                    sb.AppendLine("<li>" + olMatch.Groups[1].Value + "</li>");
+                }
+                else
+                {
+                    // close any open list
+                    if (inUl) { sb.AppendLine("</ul>"); inUl = false; }
+                    if (inOl) { sb.AppendLine("</ol>"); inOl = false; }
+
+                    // preserve normal line (no extra trimming so headings still match)
+                    sb.AppendLine(line);
                 }
             }
 
-            return output;
+            // close lists at EOF
+            if (inUl) sb.AppendLine("</ul>");
+            if (inOl) sb.AppendLine("</ol>");
+
+            return sb.ToString();
         }
     }
 }
